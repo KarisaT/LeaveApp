@@ -13,7 +13,6 @@ from blueprints.general import general_bp
 from blueprints.leave import leave_bp
 from blueprints.admin import admin_bp
 
-
 # ── App setup ─────────────────────────────────────────────────────────────────
 
 app = Flask(__name__)
