@@ -8,4 +8,4 @@ services:
       - key: SECRET_KEY
         generateValue: true
       - key: DATABASE_URL
-        value: postgresql://postgres:Ju5taqua2026@db.hveokpjabwcbtvjaiygy.supabase.co:5432/postgres
+        sync: false  # set this privately in the Render dashboard — do not commit it here

@@ -10,13 +10,14 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.0.0/dist/tabler-icons.min.css">
 <style>
 :root {
-  --amber: #D97706;
-  --amber-dark: #B45309;
-  --amber-light: #FEF3C7;
-  --slate: #0F172A;
-  --slate-2: #1E293B;
-  --slate-3: #334155;
-  --slate-4: #475569;
+  --lime: #7CB928;
+  --lime-dark: #5B8C1D;
+  --lime-mid: #96D13F;
+  --lime-light: #EAF7D5;
+  --slate: #0C192C;
+  --slate-2: #16263F;
+  --slate-3: #22344F;
+  --slate-4: #48607F;
   --muted: #94A3B8;
   --border: rgba(255,255,255,0.08);
   --radius: 10px;
@@ -55,7 +56,7 @@ body {
   position: absolute;
   width: 400px; height: 400px;
   border-radius: 50%;
-  background: radial-gradient(circle at center, rgba(217,119,6,0.18) 0%, transparent 65%);
+  background: radial-gradient(circle at center, rgba(124,185,40,0.20) 0%, transparent 65%);
   bottom: -100px; right: -100px;
   pointer-events: none;
 }
@@ -63,7 +64,7 @@ body {
   position: absolute;
   width: 200px; height: 200px;
   border-radius: 50%;
-  background: radial-gradient(circle at center, rgba(217,119,6,0.10) 0%, transparent 65%);
+  background: radial-gradient(circle at center, rgba(124,185,40,0.12) 0%, transparent 65%);
   top: 60px; left: -40px;
   pointer-events: none;
 }
@@ -79,9 +80,9 @@ body {
 .logo-mark {
   width: 36px; height: 36px;
   border-radius: 9px;
-  background: var(--amber);
+  background: var(--lime);
   display: flex; align-items: center; justify-content: center;
-  font-size: 17px; color: #fff;
+  font-size: 17px; color: var(--slate);
 }
 .logo-text {
   font-size: 18px;
@@ -89,7 +90,7 @@ body {
   color: #fff;
   letter-spacing: -0.3px;
 }
-.logo-text span { color: var(--amber); }
+.logo-text span { color: var(--lime-mid); }
 
 .panel-headline {
   font-size: 34px;
@@ -101,7 +102,7 @@ body {
 }
 .panel-headline em {
   font-style: normal;
-  color: var(--amber);
+  color: var(--lime-mid);
 }
 .panel-sub {
   font-size: 14px;
@@ -127,7 +128,7 @@ body {
   background: rgba(255,255,255,0.04);
   display: flex; align-items: center; justify-content: center;
   font-size: 14px;
-  color: var(--amber);
+  color: var(--lime-mid);
   flex-shrink: 0;
 }
 .feature-text {
@@ -166,8 +167,8 @@ body {
   font-weight: 700;
   letter-spacing: 1.1px;
   text-transform: uppercase;
-  color: var(--amber-dark);
-  background: var(--amber-light);
+  color: var(--lime-dark);
+  background: var(--lime-light);
   padding: 4px 10px;
   border-radius: 20px;
   margin-bottom: 18px;
@@ -202,11 +203,11 @@ body {
 .lockout-bar {
   background: #FFFBEB;
   border: 1px solid #FDE68A;
-  border-left: 3px solid var(--amber);
+  border-left: 3px solid #D97706;
   border-radius: var(--radius);
   padding: 11px 14px;
   font-size: 12px;
-  color: var(--amber-dark);
+  color: #B45309;
   margin-bottom: 20px;
   display: flex;
   align-items: center;
@@ -245,8 +246,8 @@ body {
 .form-control::placeholder { color: #CBD5E1; }
 .form-control:focus {
   outline: none;
-  border-color: var(--amber);
-  box-shadow: 0 0 0 3px rgba(217,119,6,0.1);
+  border-color: var(--lime-dark);
+  box-shadow: 0 0 0 3px rgba(124,185,40,0.15);
 }
 
 .btn-signin {
@@ -363,7 +364,7 @@ body {
       </div>
     </div>
   </div>
-  <div class="panel-footer">© 2025 Groot Leave System · All rights reserved</div>
+  <div class="panel-footer">© 2026 Groot Leave System · All rights reserved</div>
 </div>
 
 <div class="form-side">
@@ -410,34 +411,6 @@ body {
         <i class="ti ti-login"></i> Sign in to your account
       </button>
     </form>
-
-    <div class="hint-box">
-      <div class="hint-header"><i class="ti ti-info-circle"></i> Demo accounts — password: Pass1234!</div>
-      <div class="hint-row">
-        <div class="hint-user">
-          <div class="hint-avatar emp">JM</div> jane.mwangi
-        </div>
-        <span class="hint-role emp">Employee</span>
-      </div>
-      <div class="hint-row">
-        <div class="hint-user">
-          <div class="hint-avatar mgr">SO</div> samuel.otieno
-        </div>
-        <span class="hint-role mgr">Manager</span>
-      </div>
-      <div class="hint-row">
-        <div class="hint-user">
-          <div class="hint-avatar hr">BW</div> brian.waweru
-        </div>
-        <span class="hint-role hr">HR Admin</span>
-      </div>
-      <div class="hint-row">
-        <div class="hint-user">
-          <div class="hint-avatar pay">KN</div> kevin.njoroge
-        </div>
-        <span class="hint-role pay">Payroll</span>
-      </div>
-    </div>
   </div>
 </div>
 
