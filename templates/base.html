@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Groot Leave System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.0.0/dist/tabler-icons.min.css">
+<style>
+:root {
+  --amber: #D97706;
+  --amber-dark: #B45309;
+  --amber-light: #FEF3C7;
+  --amber-mid: #F59E0B;
+  --blue: #1D4ED8;
+  --blue-light: #EFF6FF;
+  --blue-mid: #3B82F6;
+  --slate: #0F172A;
+  --slate-2: #1E293B;
+  --slate-3: #334155;
+  --slate-4: #475569;
+  --bg: #F1F5F9;
+  --card: #ffffff;
+  --surface: #F8FAFC;
+  --border: rgba(0,0,0,0.08);
+  --text: #0F172A;
+  --muted: #64748B;
+  --hint: #94A3B8;
+  --radius: 8px;
+  --radius-lg: 12px;
+  --red: #DC2626;
+  --sidebar-w: 232px;
+}
+body.dark {
+  --bg: #080C14;
+  --card: #111827;
+  --surface: #1C2436;
+  --border: rgba(255,255,255,0.07);
+  --text: #F1F5F9;
+  --muted: #94A3B8;
+  --hint: #475569;
+  --amber-light: #2D1B00;
+  --blue-light: #0D1E3A;
+}
+body.dark .topbar { background: var(--card); }
+body.dark .form-control { background: var(--surface); color: var(--text); border-color: var(--border); }
+body.dark .filters select, body.dark .filters input { background: var(--surface); color: var(--text); border-color: var(--border); }
+body.dark .badge-pending   { background: #3D2200; color: #FCD34D; }
+body.dark .badge-approved  { background: #0D2E0D; color: #4ADE80; }
+body.dark .badge-rejected  { background: #2E0D0D; color: #F87171; }
+body.dark .badge-cancelled { background: #1E1E1E; color: #94A3B8; }
+body.dark .badge-info      { background: var(--blue-light); color: #93C5FD; }
+body.dark .alert-success   { background: #0D2E0D; color: #4ADE80; border-color: #166534; }
+body.dark .stat-card { background: var(--surface); border: 0.5px solid var(--border); }
+body.dark .wot-header { background: rgba(255,255,255,0.02); }
+#darkToggle { font-size: 18px; line-height: 1; }
+.cal-day.weekend { background: var(--surface); opacity: 0.6; }
+.cal-day.weekend .day-num { color: var(--muted); }
+.cal-day.weekend:hover { opacity: 0.85; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+.layout { display: flex; min-height: 100vh; }
+
+/* ── Sidebar ── */
+.sidebar {
+  width: var(--sidebar-w);
+  background: var(--slate);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  z-index: 200;
+  transition: transform 0.25s ease;
+}
+.sidebar-logo {
+  padding: 22px 18px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.logo-mark {
+  width: 30px; height: 30px;
+  border-radius: 8px;
+  background: var(--amber);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; color: #fff;
+  flex-shrink: 0;
+}
+.sidebar-logo .brand { font-size: 16px; font-weight: 700; color: #fff; letter-spacing: -0.3px; }
+.sidebar-logo .brand span { color: var(--amber); }
+
+/* User card */
+.user-card {
+  margin: 14px 12px 6px;
+  padding: 11px 12px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.user-avatar {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  background: var(--amber);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; color: #fff;
+  flex-shrink: 0;
+}
+.user-info { flex: 1; min-width: 0; }
+.user-name { font-size: 12px; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.user-role { font-size: 10px; color: rgba(255,255,255,0.45); margin-top: 1px; }
+.user-logout { color: rgba(255,255,255,0.3); font-size: 15px; flex-shrink: 0; transition: color 0.1s; }
+.user-logout:hover { color: rgba(255,100,100,0.75); }
+
+/* Nav */
+.nav { flex: 1; padding: 8px 0 6px; overflow-y: auto; }
+.nav-section { padding: 12px 18px 4px; font-size: 9px; font-weight: 700; color: rgba(255,255,255,0.2); text-transform: uppercase; letter-spacing: 1.2px; }
+.nav-item {
+  display: flex; align-items: center; gap: 9px;
+  padding: 8px 18px;
+  color: rgba(255,255,255,0.55);
+  font-size: 13px; font-weight: 500;
+  text-decoration: none;
+  position: relative;
+  transition: background 0.1s, color 0.1s;
+  border-radius: 0;
+}
+.nav-item:hover { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.9); }
+.nav-item.active { background: rgba(217,119,6,0.12); color: #fff; }
+.nav-item.active::before { content:''; position: absolute; left: 0; top: 0; bottom: 0; width: 2.5px; background: var(--amber); }
+.nav-item i { font-size: 16px; flex-shrink: 0; }
+.nav-badge { margin-left: auto; background: var(--amber); color: #fff; font-size: 10px; padding: 1px 6px; border-radius: 10px; font-weight: 700; }
+
+/* Sidebar bottom actions */
+.sidebar-footer {
+  padding: 10px 12px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+
+/* Mobile overlay */
+.sidebar-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 190;
+}
+.sidebar-overlay.open { display: block; }
+
+/* ── Main ── */
+.main { margin-left: var(--sidebar-w); flex: 1; display: flex; flex-direction: column; min-height: 100vh; }
+.topbar {
+  height: 54px;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 22px;
+  position: sticky; top: 0; z-index: 50; gap: 10px;
+}
+.topbar-title { font-size: 16px; font-weight: 600; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text); }
+.topbar-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.menu-toggle { display: none; background: none; border: none; cursor: pointer; padding: 6px; color: var(--text); font-size: 20px; }
+.content { padding: 22px; flex: 1; }
+
+/* ── Buttons ── */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 14px;
+  border-radius: var(--radius);
+  font-size: 13px; font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  text-decoration: none;
+  transition: background 0.1s, border-color 0.1s;
+  white-space: nowrap;
+  font-family: inherit;
+}
+.btn:hover { background: var(--surface); }
+.btn-primary { background: var(--slate); color: #fff; border-color: var(--slate-2); }
+.btn-primary:hover { background: var(--slate-2); }
+.btn-amber { background: var(--amber); color: #fff; border-color: var(--amber-dark); }
+.btn-amber:hover { background: var(--amber-dark); }
+.btn-blue { background: var(--blue); color: #fff; border-color: #1E40AF; }
+.btn-blue:hover { background: #1E40AF; }
+.btn-sm { padding: 5px 10px; font-size: 12px; }
+.btn-ghost { border-color: transparent; background: transparent; }
+.btn-ghost:hover { background: var(--surface); }
+.btn-danger { background: var(--red); color: #fff; border-color: #991B1B; }
+.btn-danger:hover { background: #991B1B; }
+
+/* ── Cards ── */
+.card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; }
+.card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.card-title { font-size: 14px; font-weight: 600; color: var(--text); }
+
+/* ── Stats ── */
+.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+.stat-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 18px;
+}
+.stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.7px; font-weight: 600; margin-bottom: 8px; }
+.stat-value { font-size: 30px; font-weight: 700; line-height: 1; letter-spacing: -1px; }
+.stat-sub { font-size: 11px; color: var(--muted); margin-top: 5px; }
+.amber { color: var(--amber); }
+.orange { color: var(--amber); }
+.blue { color: var(--blue); }
+.green { color: #16A34A; }
+.red { color: var(--red); }
+.teal { color: #0F766E; }
+
+/* ── Two col ── */
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px; }
+
+/* ── Table ── */
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { padding: 10px 14px; text-align: left; font-size: 10.5px; font-weight: 700; color: var(--muted); border-bottom: 1px solid var(--border); text-transform: uppercase; letter-spacing: 0.6px; white-space: nowrap; }
+td { padding: 12px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+tbody tr:hover td { background: var(--surface); }
+.emp-cell { display: flex; align-items: center; gap: 10px; }
+.emp-avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; }
+.emp-dept { font-size: 11px; color: var(--muted); }
+
+/* ── Badges ── */
+.badge { display: inline-flex; align-items: center; font-size: 10.5px; padding: 3px 9px; border-radius: 20px; font-weight: 700; letter-spacing: 0.2px; }
+.badge-pending  { background: #FEF9C3; color: #A16207; }
+.badge-approved { background: #DCFCE7; color: #15803D; }
+.badge-rejected { background: #FEE2E2; color: #B91C1C; }
+.badge-info      { background: var(--blue-light); color: var(--blue); }
+.badge-cancelled { background: #F1F5F9; color: #64748B; }
+
+/* ── Forms ── */
+.form-group { margin-bottom: 16px; }
+.form-label { display: block; font-size: 11.5px; font-weight: 600; color: var(--muted); margin-bottom: 6px; letter-spacing: 0.2px; }
+.form-control {
+  width: 100%; padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card); color: var(--text);
+  font-size: 13px; font-family: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.form-control:focus { outline: none; border-color: var(--amber); box-shadow: 0 0 0 3px rgba(217,119,6,0.1); }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+select.form-control { cursor: pointer; }
+textarea.form-control { resize: vertical; min-height: 80px; }
+
+/* ── Balance cards ── */
+.balance-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+.balance-card { border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; background: var(--card); }
+.balance-type { font-size: 10.5px; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.6px; }
+.balance-num { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; }
+.balance-total { font-size: 11px; color: var(--hint); }
+.progress-bar { height: 4px; background: var(--surface); border-radius: 3px; margin-top: 10px; overflow: hidden; border: 1px solid var(--border); }
+.progress-fill { height: 100%; border-radius: 3px; }
+
+/* ── Request items ── */
+.request-list { display: flex; flex-direction: column; gap: 7px; }
+.request-item {
+  display: flex; align-items: center; gap: 11px;
+  padding: 11px 13px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--card);
+  transition: background 0.1s;
+}
+.request-item:hover { background: var(--surface); }
+.req-info { flex: 1; min-width: 0; }
+.req-name { font-size: 13px; font-weight: 600; color: var(--text); }
+.req-detail { font-size: 11px; color: var(--muted); margin-top: 1px; }
+.req-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.action-btn {
+  width: 28px; height: 28px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: transparent;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; text-decoration: none;
+  transition: background 0.1s, border-color 0.1s;
+}
+.action-btn:hover { background: var(--surface); }
+.action-approve { color: #16A34A; }
+.action-approve:hover { border-color: #16A34A; background: #DCFCE7 !important; }
+.action-reject { color: var(--red); }
+.action-reject:hover { border-color: var(--red); background: #FEE2E2 !important; }
+
+/* ── Chart bars ── */
+.chart-bar-wrap { margin-top: 8px; }
+.chart-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.chart-label { font-size: 12px; color: var(--muted); width: 90px; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+.chart-bar-bg { flex: 1; height: 20px; background: var(--surface); border-radius: 4px; overflow: hidden; border: 1px solid var(--border); }
+.chart-bar-fill { height: 100%; border-radius: 3px; display: flex; align-items: center; padding: 0 8px; min-width: 36px; }
+.chart-bar-fill.orange { background: var(--amber); }
+.chart-bar-fill.blue { background: var(--blue); }
+.chart-bar-fill.teal { background: #0F766E; }
+.chart-bar-fill.gray { background: var(--muted); }
+.chart-bar-fill.green { background: #16A34A; }
+.chart-val { font-size: 10px; color: #fff; font-weight: 700; white-space: nowrap; }
+
+/* ── Alert ── */
+.alert { padding: 12px 16px; border-radius: var(--radius); font-size: 13px; margin-bottom: 16px; }
+.alert-success { background: #DCFCE7; color: #15803D; border: 1px solid #BBF7D0; }
+
+/* ── Holiday items ── */
+.holiday-list { display: flex; flex-direction: column; gap: 7px; }
+.holiday-item {
+  display: flex; align-items: center; gap: 14px;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--card);
+}
+.holiday-date-box {
+  width: 44px; height: 44px;
+  background: var(--blue-light);
+  border-radius: 10px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.holiday-date-day { font-size: 18px; font-weight: 700; color: var(--blue); line-height: 1; }
+.holiday-date-month { font-size: 9px; color: var(--blue-mid); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+
+/* ── Notifications ── */
+.notif-list { display: flex; flex-direction: column; gap: 7px; }
+.notif-item { display: flex; gap: 12px; padding: 12px 14px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--card); }
+.notif-icon { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+.notif-icon.orange { background: var(--amber-light); color: var(--amber); }
+.notif-icon.blue { background: var(--blue-light); color: var(--blue); }
+.notif-icon.green { background: #DCFCE7; color: #16A34A; }
+.notif-body { flex: 1; min-width: 0; }
+.notif-title { font-size: 13px; font-weight: 500; color: var(--text); }
+.notif-time { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+/* ── Filters ── */
+.filters { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
+.filters select, .filters input {
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 12px;
+  background: var(--card);
+  color: var(--text);
+  font-family: inherit;
+}
+
+/* ── Calendar ── */
+.cal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.cal-month { font-size: 15px; font-weight: 600; color: var(--text); }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+.cal-day-label { text-align: center; font-size: 10.5px; color: var(--muted); padding: 4px 0; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; }
+.cal-day { min-height: 48px; border-radius: 6px; padding: 5px; font-size: 11px; cursor: pointer; }
+.cal-day:hover { background: var(--surface); }
+.cal-day.today { background: var(--amber-light); }
+.cal-day.today .day-num { color: var(--amber-dark); font-weight: 700; }
+.cal-day.other-month .day-num { color: var(--hint); }
+.day-num { font-size: 12px; display: block; font-weight: 500; }
+.day-dot { width: 6px; height: 6px; border-radius: 50%; margin-top: 3px; }
+.dot-leave { background: var(--amber); }
+.dot-holiday { background: var(--blue); }
+
+/* ── Who's Out Today ── */
+.wot-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  margin-top: 18px;
+}
+.wot-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.wot-title {
+  display: flex; align-items: center; gap: 9px;
+  font-size: 13.5px; font-weight: 600; color: var(--text);
+}
+.wot-title-icon {
+  width: 28px; height: 28px;
+  border-radius: 7px;
+  background: var(--blue-light);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--blue); font-size: 14px; flex-shrink: 0;
+}
+.wot-count-pill {
+  font-size: 11px; font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: var(--amber-light);
+  color: var(--amber-dark);
+}
+.wot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(255px, 1fr));
+  gap: 10px;
+  padding: 14px 18px;
+}
+.wot-item {
+  display: flex; align-items: center; gap: 11px;
+  padding: 12px 13px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  position: relative; overflow: hidden;
+  transition: background 0.1s;
+}
+.wot-item:hover { background: var(--surface); }
+.wot-item::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+}
+.wot-item.annual::before        { background: var(--amber); }
+.wot-item.sick::before          { background: #EF4444; }
+.wot-item.maternity::before     { background: #A855F7; }
+.wot-item.paternity::before     { background: var(--blue-mid); }
+.wot-item.emergency::before        { background: #EF4444; }
+.wot-item.unpaid::before        { background: #94A3B8; }
+.wot-item.compassionate::before { background: #92400E; }
+.wot-avatar {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700;
+  flex-shrink: 0;
+}
+.wot-info { flex: 1; min-width: 0; }
+.wot-name { font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wot-dept { font-size: 11px; color: var(--muted); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wot-meta { text-align: right; flex-shrink: 0; }
+.wot-type-pill { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.3px; display: inline-block; margin-bottom: 4px; }
+.wot-type-pill.annual        { background: var(--amber-light); color: var(--amber-dark); }
+.wot-type-pill.sick          { background: #FEE2E2; color: #B91C1C; }
+.wot-type-pill.maternity     { background: #F5F3FF; color: #7C3AED; }
+.wot-type-pill.paternity     { background: var(--blue-light); color: #1D4ED8; }
+.wot-type-pill.emergency      { background: #FEE2E2; color: #B91C1C; }
+.wot-type-pill.unpaid        { background: #F1F5F9; color: #475569; }
+.wot-type-pill.compassionate { background: #FEF3C7; color: #92400E; }
+.wot-back { font-size: 11px; color: var(--muted); white-space: nowrap; }
+.wot-empty { text-align: center; padding: 32px 20px; color: var(--muted); font-size: 13px; }
+.wot-empty-icon {
+  width: 44px; height: 44px; border-radius: 50%;
+  background: #DCFCE7;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 10px; font-size: 20px; color: #16A34A;
+}
+
+/* ── Session modal ── */
+#sessionModal {
+  display: none; position: fixed; inset: 0; z-index: 9999;
+  background: rgba(0,0,0,0.55); align-items: center; justify-content: center;
+}
+#sessionModal.show { display: flex; }
+#sessionModalBox {
+  background: var(--card); border-radius: var(--radius-lg);
+  padding: 2rem; max-width: 380px; width: 90%;
+  text-align: center; border: 1px solid var(--border);
+}
+#sessionModalBox .modal-icon { font-size: 2.2rem; color: var(--amber); margin-bottom: 0.75rem; }
+#sessionModalBox h3 { margin-bottom: 0.5rem; font-size: 1.05rem; font-weight: 600; }
+#sessionModalBox p { color: var(--muted); font-size: 0.875rem; margin-bottom: 1.25rem; }
+#sessionCountdown { font-weight: 700; color: var(--amber); }
+#sessionModalBox .modal-actions { display: flex; gap: 0.75rem; justify-content: center; }
+#sessionModalBox .btn-stay {
+  background: var(--slate); color: #fff; border: none;
+  padding: 0.55rem 1.4rem; border-radius: var(--radius); cursor: pointer;
+  font-size: 0.875rem; font-weight: 600; font-family: inherit;
+}
+#sessionModalBox .btn-stay:hover { background: var(--slate-2); }
+#sessionModalBox .btn-logout {
+  background: transparent; color: var(--muted);
+  border: 1px solid var(--border);
+  padding: 0.55rem 1.4rem; border-radius: var(--radius); cursor: pointer;
+  font-size: 0.875rem; font-family: inherit;
+}
+#sessionModalBox .btn-logout:hover { color: var(--text); }
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .two-col { grid-template-columns: 1fr; }
+  .balance-grid { grid-template-columns: 1fr 1fr; }
+  .form-row { grid-template-columns: 1fr; }
+  .apply-layout { grid-template-columns: 1fr !important; }
+  .reports-grid { grid-template-columns: 1fr !important; }
+}
+@media (max-width: 768px) {
+  .sidebar { transform: translateX(-100%); }
+  .sidebar.open { transform: translateX(0); }
+  .main { margin-left: 0; }
+  .menu-toggle { display: flex; align-items: center; justify-content: center; }
+  .topbar { padding: 0 14px; }
+  .topbar-title { font-size: 14px; }
+  .topbar-actions .btn-label { display: none; }
+  .content { padding: 14px; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .stat-value { font-size: 24px; }
+  .balance-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .balance-num { font-size: 22px; }
+  .two-col { grid-template-columns: 1fr; }
+  .form-row { grid-template-columns: 1fr; }
+  .apply-layout { grid-template-columns: 1fr !important; }
+  .reports-grid { grid-template-columns: 1fr !important; }
+  .card { padding: 14px; }
+  .request-item { flex-wrap: wrap; }
+  .req-actions { width: 100%; justify-content: flex-end; margin-top: 6px; }
+  .cal-day { min-height: 36px; padding: 3px; }
+  .cal-day-label { font-size: 9px; }
+  .day-num { font-size: 10px; }
+  .day-dot { width: 5px; height: 5px; }
+  /* Table: hide lower-priority columns on small screens */
+  .hide-mobile { display: none !important; }
+  /* Make action buttons larger for touch */
+  .action-btn { width: 36px; height: 36px; font-size: 16px; }
+  .btn-sm { padding: 7px 12px; font-size: 13px; }
+  /* Approval / employee table rows wrap nicely */
+  .emp-cell { gap: 8px; }
+  .emp-avatar { width: 28px; height: 28px; font-size: 10px; }
+  /* Filters stack vertically */
+  .filters { flex-direction: column; align-items: stretch; }
+  .filters select, .filters input { width: 100%; }
+  /* Absenteeism table */
+  .absentee-table th:nth-child(4),
+  .absentee-table td:nth-child(4) { display: none; }
+}
+@media (max-width: 480px) {
+  .stats-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .balance-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stat-card { padding: 12px; }
+  .stat-value { font-size: 22px; }
+  .wot-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark"><i class="ti ti-leaf"></i></div>
+      <div class="brand">Groot<span> Leave</span></div>
+    </div>
+
+    <div class="user-card">
+      <div class="user-avatar">{{ user.initials }}</div>
+      <div class="user-info">
+        <div class="user-name">{{ user.name }}</div>
+        <div class="user-role">{{ roles[role].label }}</div>
+      </div>
+      <a href="/logout" class="user-logout" title="Sign out"><i class="ti ti-logout"></i></a>
+    </div>
+
+    <nav class="nav">
+      <div class="nav-section">Main</div>
+      <a href="/dashboard" class="nav-item {% if request.endpoint == 'general.dashboard' %}active{% endif %}" onclick="closeSidebar()">
+        <i class="ti ti-layout-dashboard"></i>Dashboard
+      </a>
+
+      {% if role == 'employee' %}
+      <a href="/apply" class="nav-item {% if request.endpoint == 'leave.apply_leave' %}active{% endif %}" onclick="closeSidebar()">
+        <i class="ti ti-file-plus"></i>Apply for Leave
+      </a>
+      <a href="/my-leave" class="nav-item {% if request.endpoint == 'leave.my_leave' %}active{% endif %}" onclick="closeSidebar()">
+        <i class="ti ti-calendar-event"></i>My Leave
+      </a>
+      {% endif %}
+
+      {% if role in ['manager', 'hr'] %}
+      <a href="/apply" class="nav-item {% if request.endpoint == 'leave.apply_leave' %}active{% endif %}" onclick="closeSidebar()">
+        <i class="ti ti-file-plus"></i>Apply for Leave
+      </a>
+      <a href="/my-leave" class="nav-item {% if request.endpoint == 'leave.my_leave' %}active{% endif %}" onclick="closeSidebar()">
+        <i class="ti ti-calendar-event"></i>My Leave
+      </a>
+      {% endif %}
+
+      {% if role in ['manager', 'hr'] %}
+      <a href="/approvals" class="nav-item {% if request.endpoint == 'leave.approvals' %}active{% endif %}" onclick="closeSidebar()">
+        <i class="ti ti-checks"></i>
+        {% if role == 'manager' %}Approvals{% else %}All Requests{% endif %}
+        {% if notifications|length > 0 %}<span class="nav-badge">{{ notifications|length }}</span>{% endif %}
+      </a>
+      {% endif %}
+
+      {% if role in ['manager', 'hr'] %}
+      <a href="/employees" class="nav-item {% if request.endpoint == 'admin.employees_view' %}active{% endif %}" onclick="closeSidebar()">
+        <i class="ti ti-users"></i>Employees
+      </a>
+      {% endif %}
+
+      {% if role == 'payroll' %}
+      <a href="/reports" class="nav-item {% if request.endpoint == 'admin.reports' %}active{% endif %}" onclick="closeSidebar()">
+        <i class="ti ti-report-money"></i>Leave & Payroll
+      </a>
+      <a href="/employees" class="nav-item {% if request.endpoint == 'admin.employees_view' %}active{% endif %}" onclick="closeSidebar()">
+        <i class="ti ti-users"></i>Employee Summary
+      </a>
+      {% endif %}
+
+      <a href="/calendar" class="nav-item {% if request.endpoint == 'general.calendar' %}active{% endif %}" onclick="closeSidebar()">
+        <i class="ti ti-calendar"></i>
+        {% if role == 'manager' %}Team Calendar{% else %}Leave Calendar{% endif %}
+      </a>
+
+      <div class="nav-section">Info</div>
+      <a href="/holidays" class="nav-item {% if request.endpoint == 'admin.holidays_view' %}active{% endif %}" onclick="closeSidebar()">
+        <i class="ti ti-star"></i>Public Holidays
+      </a>
+
+      {% if role in ['hr', 'payroll', 'manager'] %}
+      <a href="/reports" class="nav-item {% if request.endpoint == 'admin.reports' %}active{% endif %}" onclick="closeSidebar()">
+        <i class="ti ti-chart-bar"></i>Reports & Analytics
+      </a>
+      {% endif %}
+      {% if role in ['hr', 'manager'] %}
+      <a href="/parental-leave" class="nav-item {% if request.endpoint == 'admin.parental_leave_view' %}active{% endif %}" onclick="closeSidebar()">
+        <i class="ti ti-baby-carriage"></i>Parental Leave
+      </a>
+      <a href="/delegations" class="nav-item {% if request.endpoint == 'admin.delegations_view' %}active{% endif %}" onclick="closeSidebar()">
+        <i class="ti ti-transfer"></i>Delegations
+      </a>
+      {% endif %}
+      {% if role == 'hr' %}
+      <a href="/audit-log" class="nav-item {% if request.endpoint == 'admin.audit_log_view' %}active{% endif %}" onclick="closeSidebar()">
+        <i class="ti ti-clipboard-list"></i>Audit Log
+      </a>
+      <a href="/account-lockouts" class="nav-item {% if request.endpoint == 'admin.account_lockouts_view' %}active{% endif %}" onclick="closeSidebar()">
+        <i class="ti ti-lock-open"></i>Account Lockouts
+      </a>
+      {% endif %}
+
+      <a href="/notifications" class="nav-item {% if request.endpoint == 'general.notifications_view' %}active{% endif %}" onclick="closeSidebar()">
+        <i class="ti ti-bell"></i>Notifications
+        {% if notifications|length > 0 %}<span class="nav-badge">{{ notifications|length }}</span>{% endif %}
+      </a>
+
+      <a href="/profile" class="nav-item {% if request.endpoint == 'general.profile' %}active{% endif %}" onclick="closeSidebar()">
+        <i class="ti ti-user"></i>My Profile
+      </a>
+    </nav>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <button class="menu-toggle" onclick="toggleSidebar()" aria-label="Menu">
+        <i class="ti ti-menu-2"></i>
+      </button>
+      <div class="topbar-title">{% block page_title %}Dashboard{% endblock %}</div>
+      <div class="topbar-actions">
+        <button class="btn btn-ghost btn-sm" id="darkToggle" onclick="toggleDark()" title="Toggle dark mode"><i class="ti ti-moon" id="darkIcon"></i></button>
+        <a href="/notifications" class="btn btn-ghost btn-sm"><i class="ti ti-bell"></i></a>
+        {% if role == 'employee' %}
+        <a href="/apply" class="btn btn-primary btn-sm"><i class="ti ti-plus"></i><span class="btn-label"> Apply</span></a>
+        {% elif role in ['hr', 'manager'] %}
+        <a href="/apply" class="btn btn-primary btn-sm"><i class="ti ti-plus"></i><span class="btn-label"> Apply</span></a>
+        <a href="/approvals" class="btn btn-ghost btn-sm"><i class="ti ti-checks"></i><span class="btn-label"> Approvals</span></a>
+        <a href="/employees" class="btn btn-ghost btn-sm"><i class="ti ti-users"></i><span class="btn-label"> Employees</span></a>
+        {% else %}
+        <a href="/reports" class="btn btn-primary btn-sm"><i class="ti ti-download"></i><span class="btn-label"> Reports</span></a>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="content">
+      {% block content %}{% endblock %}
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  if(localStorage.getItem('darkMode') === '1') {
+    document.body.classList.add('dark');
+  }
+})();
+function toggleDark() {
+  const on = document.body.classList.toggle('dark');
+  localStorage.setItem('darkMode', on ? '1' : '0');
+  document.getElementById('darkIcon').className = on ? 'ti ti-sun' : 'ti ti-moon';
+}
+document.addEventListener('DOMContentLoaded', function(){
+  const icon = document.getElementById('darkIcon');
+  if (icon && document.body.classList.contains('dark')) {
+    icon.className = 'ti ti-sun';
+  }
+});
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebarOverlay').classList.toggle('open');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('open');
+}
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeSidebar();
+});
+</script>
+
+{% block scripts %}{% endblock %}
+
+{% if session.get('logged_in') %}
+<div id="sessionModal" role="dialog" aria-modal="true" aria-labelledby="sessionModalTitle">
+  <div id="sessionModalBox">
+    <div class="modal-icon"><i class="ti ti-clock-exclamation"></i></div>
+    <h3 id="sessionModalTitle">Session expiring soon</h3>
+    <p>You've been inactive for a while. You'll be logged out in <span id="sessionCountdown">60</span> seconds.</p>
+    <div class="modal-actions">
+      <button class="btn-stay" onclick="stayLoggedIn()">Stay logged in</button>
+      <button class="btn-logout" onclick="window.location.href='{{ url_for('auth.logout') }}'">Log out</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const IDLE_WARN_MS  = 29 * 60 * 1000;
+  const COUNTDOWN_SEC = 60;
+  const LOGOUT_URL    = "{{ url_for('auth.logout') }}";
+  const KEEP_URL      = "{{ url_for('general.dashboard') }}";
+  let idleTimer, countdownTimer, secondsLeft;
+  const modal   = document.getElementById('sessionModal');
+  const countEl = document.getElementById('sessionCountdown');
+  const ACTIVITY = ['mousemove','keydown','click','scroll','touchstart'];
+  function resetIdle() {
+    clearTimeout(idleTimer);
+    if (!modal.classList.contains('show')) {
+      idleTimer = setTimeout(showWarning, IDLE_WARN_MS);
+    }
+  }
+  function showWarning() {
+    secondsLeft = COUNTDOWN_SEC;
+    countEl.textContent = secondsLeft;
+    modal.classList.add('show');
+    countdownTimer = setInterval(tick, 1000);
+  }
+  function tick() {
+    secondsLeft--;
+    countEl.textContent = secondsLeft;
+    if (secondsLeft <= 0) {
+      clearInterval(countdownTimer);
+      window.location.href = LOGOUT_URL;
+    }
+  }
+  function stayLoggedIn() {
+    clearInterval(countdownTimer);
+    modal.classList.remove('show');
+    fetch(KEEP_URL, { credentials: 'same-origin' }).catch(() => {});
+    resetIdle();
+  }
+  window.stayLoggedIn = stayLoggedIn;
+  ACTIVITY.forEach(ev => document.addEventListener(ev, resetIdle, { passive: true }));
+  resetIdle();
+})();
+</script>
+{% endif %}
+</body>
+</html>
+

@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign In — Groot Leave</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.0.0/dist/tabler-icons.min.css">
+<style>
+:root {
+  --amber: #D97706;
+  --amber-dark: #B45309;
+  --amber-light: #FEF3C7;
+  --slate: #0F172A;
+  --slate-2: #1E293B;
+  --slate-3: #334155;
+  --slate-4: #475569;
+  --muted: #94A3B8;
+  --border: rgba(255,255,255,0.08);
+  --radius: 10px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  background: #F8FAFC;
+}
+
+/* Left panel */
+.panel {
+  width: 44%;
+  background: var(--slate);
+  display: flex;
+  flex-direction: column;
+  padding: 44px 48px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Subtle texture lines */
+.panel-lines {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* Amber glow orb */
+.panel-orb {
+  position: absolute;
+  width: 400px; height: 400px;
+  border-radius: 50%;
+  background: radial-gradient(circle at center, rgba(217,119,6,0.18) 0%, transparent 65%);
+  bottom: -100px; right: -100px;
+  pointer-events: none;
+}
+.panel-orb-2 {
+  position: absolute;
+  width: 200px; height: 200px;
+  border-radius: 50%;
+  background: radial-gradient(circle at center, rgba(217,119,6,0.10) 0%, transparent 65%);
+  top: 60px; left: -40px;
+  pointer-events: none;
+}
+
+.panel-content { position: relative; z-index: 1; flex: 1; display: flex; flex-direction: column; }
+
+.panel-logo {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 72px;
+}
+.logo-mark {
+  width: 36px; height: 36px;
+  border-radius: 9px;
+  background: var(--amber);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px; color: #fff;
+}
+.logo-text {
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.3px;
+}
+.logo-text span { color: var(--amber); }
+
+.panel-headline {
+  font-size: 34px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.2;
+  letter-spacing: -0.8px;
+  margin-bottom: 14px;
+}
+.panel-headline em {
+  font-style: normal;
+  color: var(--amber);
+}
+.panel-sub {
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.65;
+  max-width: 290px;
+  margin-bottom: 52px;
+}
+.panel-features {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.panel-feature {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+.feature-icon {
+  width: 30px; height: 30px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.04);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+  color: var(--amber);
+  flex-shrink: 0;
+}
+.feature-text {
+  font-size: 13px;
+  color: rgba(255,255,255,0.65);
+}
+
+.panel-footer {
+  position: relative; z-index: 1;
+  margin-top: auto;
+  padding-top: 32px;
+  font-size: 11px;
+  color: rgba(255,255,255,0.2);
+  letter-spacing: 0.3px;
+}
+
+/* Right form side */
+.form-side {
+  flex: 1;
+  background: #F8FAFC;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 32px;
+}
+.form-box {
+  width: 100%;
+  max-width: 370px;
+}
+
+.form-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+  color: var(--amber-dark);
+  background: var(--amber-light);
+  padding: 4px 10px;
+  border-radius: 20px;
+  margin-bottom: 18px;
+}
+.form-title {
+  font-size: 27px;
+  font-weight: 700;
+  color: #0F172A;
+  letter-spacing: -0.5px;
+  margin-bottom: 6px;
+}
+.form-desc {
+  font-size: 13.5px;
+  color: #64748B;
+  margin-bottom: 30px;
+  line-height: 1.5;
+}
+
+.alert-error {
+  background: #FFF1F2;
+  color: #9F1239;
+  border: 1px solid #FECDD3;
+  border-left: 3px solid #FB7185;
+  border-radius: var(--radius);
+  padding: 11px 14px;
+  font-size: 13px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.lockout-bar {
+  background: #FFFBEB;
+  border: 1px solid #FDE68A;
+  border-left: 3px solid var(--amber);
+  border-radius: var(--radius);
+  padding: 11px 14px;
+  font-size: 12px;
+  color: var(--amber-dark);
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.form-group { margin-bottom: 16px; }
+.form-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 7px;
+  letter-spacing: 0.2px;
+}
+.input-wrap { position: relative; }
+.input-icon {
+  position: absolute;
+  left: 12px; top: 50%;
+  transform: translateY(-50%);
+  color: #94A3B8;
+  font-size: 16px;
+  pointer-events: none;
+}
+.form-control {
+  width: 100%;
+  padding: 10px 14px 10px 38px;
+  border: 1.5px solid #E2E8F0;
+  border-radius: var(--radius);
+  background: #fff;
+  color: #0F172A;
+  font-size: 13.5px;
+  font-family: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.form-control::placeholder { color: #CBD5E1; }
+.form-control:focus {
+  outline: none;
+  border-color: var(--amber);
+  box-shadow: 0 0 0 3px rgba(217,119,6,0.1);
+}
+
+.btn-signin {
+  width: 100%;
+  padding: 12px;
+  border-radius: var(--radius);
+  background: var(--slate);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 8px;
+  letter-spacing: 0.1px;
+  transition: background 0.15s, transform 0.1s;
+  font-family: inherit;
+}
+.btn-signin:hover { background: var(--slate-2); transform: translateY(-1px); }
+.btn-signin:active { transform: translateY(0); }
+.btn-signin i { font-size: 16px; }
+
+/* Demo hint box */
+.hint-box {
+  background: #fff;
+  border: 1.5px solid #E2E8F0;
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-top: 22px;
+}
+.hint-header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #94A3B8;
+  letter-spacing: 0.3px;
+  margin-bottom: 12px;
+}
+.hint-header i { color: #64748B; font-size: 14px; }
+.hint-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 0;
+  border-bottom: 1px solid #F1F5F9;
+  font-size: 12.5px;
+}
+.hint-row:last-child { border: none; padding-bottom: 0; }
+.hint-user { display: flex; align-items: center; gap: 8px; color: #1E293B; font-weight: 500; }
+.hint-avatar {
+  width: 24px; height: 24px;
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; font-weight: 700;
+  flex-shrink: 0;
+}
+.hint-avatar.emp  { background: #EFF6FF; color: #1D4ED8; }
+.hint-avatar.mgr  { background: #FFFBEB; color: #D97706; }
+.hint-avatar.hr   { background: #F0FDF4; color: #16A34A; }
+.hint-avatar.pay  { background: #FAF5FF; color: #7C3AED; }
+.hint-role {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+.hint-role.emp  { background: #EFF6FF; color: #1D4ED8; }
+.hint-role.mgr  { background: #FFFBEB; color: #D97706; }
+.hint-role.hr   { background: #F0FDF4; color: #16A34A; }
+.hint-role.pay  { background: #FAF5FF; color: #7C3AED; }
+
+@media (max-width: 700px) {
+  .panel { display: none; }
+  .form-side { background: #fff; padding: 32px 20px; }
+}
+</style>
+</head>
+<body>
+
+<div class="panel">
+  <div class="panel-lines"></div>
+  <div class="panel-orb"></div>
+  <div class="panel-orb-2"></div>
+  <div class="panel-content">
+    <div class="panel-logo">
+      <div class="logo-mark"><i class="ti ti-leaf"></i></div>
+      <div class="logo-text">Groot<span> Leave</span></div>
+    </div>
+
+    <div class="panel-headline">Manage leave,<br><em>effortlessly.</em></div>
+    <div class="panel-sub">One place for requests, approvals, balances and team visibility — built for Kenyan teams.</div>
+
+    <div class="panel-features">
+      <div class="panel-feature">
+        <div class="feature-icon"><i class="ti ti-check"></i></div>
+        <div class="feature-text">One-click approvals for managers</div>
+      </div>
+      <div class="panel-feature">
+        <div class="feature-icon"><i class="ti ti-calendar"></i></div>
+        <div class="feature-text">Live team leave calendar</div>
+      </div>
+      <div class="panel-feature">
+        <div class="feature-icon"><i class="ti ti-chart-bar"></i></div>
+        <div class="feature-text">Leave balance tracking & reports</div>
+      </div>
+      <div class="panel-feature">
+        <div class="feature-icon"><i class="ti ti-bell"></i></div>
+        <div class="feature-text">Instant in-app notifications</div>
+      </div>
+    </div>
+  </div>
+  <div class="panel-footer">© 2025 Groot Leave System · All rights reserved</div>
+</div>
+
+<div class="form-side">
+  <div class="form-box">
+    <div class="form-eyebrow"><i class="ti ti-building"></i> Employee Portal</div>
+    <div class="form-title">Welcome back</div>
+    <div class="form-desc">Sign in with your credentials to continue.</div>
+
+    {% if lockout_seconds is defined and lockout_seconds %}
+    <div class="lockout-bar">
+      <i class="ti ti-clock"></i>
+      Too many failed attempts. Try again in <strong>&nbsp;{{ lockout_seconds }}s</strong>.
+    </div>
+    {% endif %}
+
+    {% if error %}
+    <div class="alert-error"><i class="ti ti-alert-circle"></i> {{ error }}</div>
+    {% endif %}
+
+    <form method="POST" action="/login">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="form-group">
+        <label class="form-label">Username</label>
+        <div class="input-wrap">
+          <i class="ti ti-user input-icon"></i>
+          <input type="text" name="username" class="form-control"
+                 placeholder="e.g. jane.mwangi"
+                 autocomplete="username" required>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <div class="input-wrap">
+          <i class="ti ti-lock input-icon"></i>
+          <input type="password" name="password" class="form-control"
+                 placeholder="••••••••"
+                 autocomplete="current-password" required>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-signin">
+        <i class="ti ti-login"></i> Sign in to your account
+      </button>
+    </form>
+
+    <div class="hint-box">
+      <div class="hint-header"><i class="ti ti-info-circle"></i> Demo accounts — password: Pass1234!</div>
+      <div class="hint-row">
+        <div class="hint-user">
+          <div class="hint-avatar emp">JM</div> jane.mwangi
+        </div>
+        <span class="hint-role emp">Employee</span>
+      </div>
+      <div class="hint-row">
+        <div class="hint-user">
+          <div class="hint-avatar mgr">SO</div> samuel.otieno
+        </div>
+        <span class="hint-role mgr">Manager</span>
+      </div>
+      <div class="hint-row">
+        <div class="hint-user">
+          <div class="hint-avatar hr">BW</div> brian.waweru
+        </div>
+        <span class="hint-role hr">HR Admin</span>
+      </div>
+      <div class="hint-row">
+        <div class="hint-user">
+          <div class="hint-avatar pay">KN</div> kevin.njoroge
+        </div>
+        <span class="hint-role pay">Payroll</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

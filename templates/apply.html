@@ -1,0 +1,386 @@
+{% extends "base.html" %}
+{% block page_title %}Apply for Leave{% endblock %}
+{% block content %}
+
+<div class="apply-layout" style="display:grid;grid-template-columns:1fr 320px;gap:24px;align-items:start;max-width:960px">
+
+  <!-- ── Left: the form ─────────────────────────────────────────────────── -->
+  <div class="card" style="min-width:0">
+    <div class="card-header"><span class="card-title">New Leave Application</span></div>
+
+    {% if form_error %}
+    <div class="alert" style="background:#FEEBEB;color:#8B0000;border:0.5px solid #F5A5A5;margin-bottom:16px">
+      <i class="ti ti-alert-circle"></i> {{ form_error }}
+    </div>
+    {% endif %}
+
+    <form method="POST" action="/apply" id="applyForm" enctype="multipart/form-data">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="form-group">
+        <label class="form-label">Leave Type</label>
+        <select name="leave_type" class="form-control" required id="leaveTypeSelect" onchange="updateBalanceHint(); updatePolicyPanel(); updateTeamPanel();">
+          <option value="">Select type...</option>
+          <option>Annual Leave</option>
+          <option>Sick Leave</option>
+          <option>Compassionate Leave</option>
+          <option>Emergency Leave</option>
+        </select>
+        <!-- Balance hint shown after selecting a type -->
+        <div id="balanceHint" style="display:none;font-size:12px;margin-top:6px;padding:7px 10px;border-radius:6px;background:var(--ct-blue-light);color:var(--ct-blue)">
+          <i class="ti ti-info-circle"></i> <span id="balanceHintText"></span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <div class="form-row">
+          <div>
+            <label class="form-label">From</label>
+            <input type="date" name="from_date" id="fromDate" class="form-control" required onchange="previewDays(); updateTeamPanel(); updateHolidayPanel();">
+          </div>
+          <div>
+            <label class="form-label">To</label>
+            <input type="date" name="to_date" id="toDate" class="form-control" required onchange="previewDays(); updateTeamPanel(); updateHolidayPanel();">
+          </div>
+        </div>
+      </div>
+
+      <!-- Live day count preview -->
+      <div id="dayPreview" style="display:none;margin:-8px 0 16px;padding:10px 14px;border-radius:8px;background:var(--surface);border:0.5px solid var(--border)">
+        <span style="font-size:13px">Estimated working days: </span>
+        <strong id="dayCount" style="font-size:15px;color:var(--amber)">—</strong>
+        <span style="font-size:11px;color:var(--muted);margin-left:6px">(weekends &amp; public holidays excluded)</span>
+        <span id="holidayNote" style="font-size:11px;color:var(--blue-mid);margin-left:6px;display:none">· <span id="holidayNoteText"></span> holiday(s) skipped</span>
+      </div>
+
+      <!-- Sick leave form upload (shown only when Sick Leave is selected) -->
+      <div class="form-group" id="sickFormGroup" style="display:none">
+        <label class="form-label">
+          Sick Off Form / Medical Certificate
+          <span style="font-size:11px;color:var(--muted);font-weight:400;margin-left:4px">(required for absences &gt; 3 days)</span>
+        </label>
+        <div id="sickDropzone" style="border:1.5px dashed var(--border);border-radius:10px;padding:20px 16px;text-align:center;cursor:pointer;background:var(--surface);transition:border-color .2s" onclick="document.getElementById('sickFormFile').click()" ondragover="event.preventDefault();this.style.borderColor='var(--blue)'" ondragleave="this.style.borderColor='var(--border)'" ondrop="handleDrop(event)">
+          <i class="ti ti-upload" style="font-size:20px;color:var(--muted);display:block;margin-bottom:6px"></i>
+          <p style="font-size:12.5px;color:var(--muted);margin:0">Click to upload or drag &amp; drop</p>
+          <p style="font-size:11px;color:var(--hint);margin:4px 0 0">PDF, JPG, PNG — max 5 MB</p>
+        </div>
+        <input type="file" id="sickFormFile" name="sick_form" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="showFilePreview(this)">
+        <div id="filePreview" style="display:none;margin-top:10px;padding:10px 12px;border-radius:8px;background:var(--surface);border:0.5px solid var(--border);display:none;align-items:center;gap:10px">
+          <i class="ti ti-file-description" style="font-size:18px;color:var(--blue)"></i>
+          <span id="filePreviewName" style="font-size:12.5px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+          <button type="button" onclick="clearFile()" style="border:none;background:none;cursor:pointer;color:var(--muted);font-size:14px"><i class="ti ti-x"></i></button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Reason / Notes</label>
+        <textarea name="reason" class="form-control" rows="3" placeholder="Brief description of leave reason..."></textarea>
+      </div>
+
+      <div style="display:flex;gap:10px">
+        <a href="/my-leave" class="btn">Cancel</a>
+        <button type="submit" class="btn btn-primary"><i class="ti ti-send"></i> Submit Application</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- ── Right: contextual panels ───────────────────────────────────────── -->
+  <div style="display:flex;flex-direction:column;gap:16px">
+
+    <!-- Panel 1: Policy rules (changes with leave type dropdown) -->
+    <div id="policyPanel" style="display:none;border-radius:var(--radius-lg);border:1px solid var(--border);background:var(--card);overflow:hidden">
+      <div id="policyHeader" style="padding:13px 16px;border-bottom:1px solid var(--border);background:var(--surface);display:flex;align-items:center;gap:9px">
+        <div id="policyIcon" style="width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0"></div>
+        <span id="policyTitle" style="font-size:13px;font-weight:600;color:var(--text)"></span>
+      </div>
+      <div id="policyRules" style="padding:13px 16px;display:flex;flex-direction:column;gap:8px"></div>
+    </div>
+
+    <!-- Panel 2: Holidays in selected range -->
+    <div id="holidayPanel" style="display:none;border-radius:var(--radius-lg);border:1px solid var(--border);background:var(--card);overflow:hidden">
+      <div style="padding:13px 16px;border-bottom:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:9px">
+          <div style="width:28px;height:28px;border-radius:7px;background:var(--blue-light);display:flex;align-items:center;justify-content:center;color:var(--blue);font-size:14px;flex-shrink:0">
+            <i class="ti ti-star"></i>
+          </div>
+          <span style="font-size:13px;font-weight:600;color:var(--text)">Holidays in Range</span>
+        </div>
+        <span id="holidayCount" style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:var(--blue-light);color:var(--blue)"></span>
+      </div>
+      <div id="holidayList" style="padding:10px 14px;display:flex;flex-direction:column;gap:6px"></div>
+    </div>
+
+    <!-- Panel 3: Team availability -->
+    <div id="teamPanel" style="display:none;border-radius:var(--radius-lg);border:1px solid var(--border);background:var(--card);overflow:hidden">
+      <div style="padding:13px 16px;border-bottom:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:9px">
+          <div style="width:28px;height:28px;border-radius:7px;background:var(--amber-light);display:flex;align-items:center;justify-content:center;color:var(--amber-dark);font-size:14px;flex-shrink:0">
+            <i class="ti ti-users"></i>
+          </div>
+          <span style="font-size:13px;font-weight:600;color:var(--text)">Team Availability</span>
+        </div>
+        <span id="teamAwayCount" style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:var(--amber-light);color:var(--amber-dark)"></span>
+      </div>
+      <div id="teamList" style="padding:10px 14px;display:flex;flex-direction:column;gap:6px"></div>
+    </div>
+
+    <!-- Idle state — shown when nothing is selected yet -->
+    <div id="idleHint" style="border-radius:var(--radius-lg);border:1px dashed var(--border);padding:20px 18px;text-align:center;color:var(--muted)">
+      <i class="ti ti-info-circle" style="font-size:20px;margin-bottom:8px;display:block"></i>
+      <p style="font-size:12px;line-height:1.6">Select a leave type and date range to see policy rules, public holidays, and team availability for your chosen period.</p>
+    </div>
+
+  </div><!-- /right column -->
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Server data ──────────────────────────────────────────────────────────────
+const balances = {{ balances | tojson }};
+const balanceKeys = {
+  "Annual Leave":        { key: "annual",        max: 21 },
+  "Sick Leave":          { key: "sick",          max: 30 },
+  "Emergency Leave":     { key: "emergency",     max: 5  },
+  "Compassionate Leave": { key: "compassionate", max: 3  }
+};
+
+// Public holidays (all upcoming) from DB
+const allHolidays = {{ upcoming_holidays | tojson }};
+
+// Team leave requests from DB
+const teamLeaves = {{ team_leaves | tojson }};
+
+// Leave policies from server
+const leavePolicies = {{ leave_policies | tojson }};
+
+// Policy colour map
+const policyColors = {
+  amber:  { bg: 'var(--amber-light)',  color: 'var(--amber-dark)',  icon: '#D97706' },
+  red:    { bg: '#FEE2E2',             color: '#B91C1C',            icon: '#DC2626' },
+  purple: { bg: '#F5F3FF',             color: '#7C3AED',            icon: '#7C3AED' },
+  teal:   { bg: '#F0FDFA',             color: '#0F766E',            icon: '#14B8A6' },
+  blue:   { bg: 'var(--blue-light)',   color: 'var(--blue)',        icon: '#1D4ED8' },
+};
+
+// Leave type → css class
+const leaveClass = {
+  "Annual Leave":        "annual",
+  "Sick Leave":          "sick",
+  "Compassionate Leave": "compassionate",
+  "Emergency Leave":         "emergency",
+  "Maternity Leave":     "maternity",
+  "Paternity Leave":     "paternity",
+};
+
+// ── Working day counter ──────────────────────────────────────────────────────
+const publicHolidaySet = new Set(allHolidays.map(h => h.date));
+
+function countWorkingDays(from, to) {
+  let d = new Date(from), end = new Date(to), count = 0;
+  d.setHours(0,0,0,0); end.setHours(0,0,0,0);
+  while (d <= end) {
+    const dow = d.getDay();
+    const iso = d.toISOString().slice(0,10);
+    if (dow !== 0 && dow !== 6 && !publicHolidaySet.has(iso)) count++;
+    d.setDate(d.getDate() + 1);
+  }
+  return count;
+}
+
+function holidaysInRange(from, to) {
+  return allHolidays.filter(h => h.date >= from && h.date <= to);
+}
+
+// ── Form handlers ────────────────────────────────────────────────────────────
+function previewDays() {
+  const from = document.getElementById('fromDate').value;
+  const to   = document.getElementById('toDate').value;
+  const preview = document.getElementById('dayPreview');
+  if (!from || !to || to < from) { preview.style.display='none'; return; }
+  const days = countWorkingDays(from, to);
+  document.getElementById('dayCount').textContent = days;
+
+  const hols = holidaysInRange(from, to);
+  const noteEl = document.getElementById('holidayNote');
+  if (hols.length > 0) {
+    document.getElementById('holidayNoteText').textContent = hols.length;
+    noteEl.style.display = 'inline';
+  } else {
+    noteEl.style.display = 'none';
+  }
+  preview.style.display = 'block';
+}
+
+function updateBalanceHint() {
+  const type = document.getElementById('leaveTypeSelect').value;
+  const hint = document.getElementById('balanceHint');
+  const txt  = document.getElementById('balanceHintText');
+  // Toggle sick form upload
+  const sickGroup = document.getElementById('sickFormGroup');
+  if (sickGroup) sickGroup.style.display = (type === 'Sick Leave') ? 'block' : 'none';
+  if (!type) { hint.style.display='none'; return; }
+  const info = balanceKeys[type];
+  if (!info || !info.key) { hint.style.display='none'; return; }
+  const rem = balances[info.key] ?? 0;
+  txt.textContent = `You have ${rem} of ${info.max} ${type} days remaining.`;
+  hint.style.display = 'block';
+}
+
+// File upload helpers
+function showFilePreview(input) {
+  const preview = document.getElementById('filePreview');
+  const name = document.getElementById('filePreviewName');
+  if (input.files && input.files[0]) {
+    name.textContent = input.files[0].name;
+    preview.style.display = 'flex';
+    document.getElementById('sickDropzone').style.display = 'none';
+  }
+}
+function clearFile() {
+  document.getElementById('sickFormFile').value = '';
+  document.getElementById('filePreview').style.display = 'none';
+  document.getElementById('sickDropzone').style.display = 'block';
+}
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('sickDropzone').style.borderColor = 'var(--border)';
+  const file = e.dataTransfer.files[0];
+  if (file) {
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    document.getElementById('sickFormFile').files = dt.files;
+    showFilePreview(document.getElementById('sickFormFile'));
+  }
+}
+
+// ── Policy panel ─────────────────────────────────────────────────────────────
+function updatePolicyPanel() {
+  const type = document.getElementById('leaveTypeSelect').value;
+  const panel = document.getElementById('policyPanel');
+  if (!type || !leavePolicies[type]) { panel.style.display='none'; checkIdleHint(); return; }
+
+  const policy = leavePolicies[type];
+  const c = policyColors[policy.color] || policyColors.blue;
+
+  const iconEl = document.getElementById('policyIcon');
+  iconEl.style.background = c.bg;
+  iconEl.style.color = c.icon;
+  iconEl.innerHTML = `<i class="ti ${policy.icon}"></i>`;
+
+  document.getElementById('policyTitle').textContent = type + ' Policy';
+
+  const rulesEl = document.getElementById('policyRules');
+  rulesEl.innerHTML = policy.rules.map(r =>
+    `<div style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;line-height:1.55;color:var(--text)">
+      <i class="ti ti-point-filled" style="flex-shrink:0;margin-top:3px;font-size:10px;color:${c.icon}"></i>
+      <span>${r}</span>
+    </div>`
+  ).join('');
+
+  panel.style.display = 'block';
+  checkIdleHint();
+}
+
+// ── Holiday panel ────────────────────────────────────────────────────────────
+function updateHolidayPanel() {
+  const from = document.getElementById('fromDate').value;
+  const to   = document.getElementById('toDate').value;
+  const panel = document.getElementById('holidayPanel');
+  if (!from || !to || to < from) { panel.style.display='none'; checkIdleHint(); return; }
+
+  const hols = holidaysInRange(from, to);
+  document.getElementById('holidayCount').textContent = hols.length + ' holiday' + (hols.length !== 1 ? 's' : '');
+
+  const listEl = document.getElementById('holidayList');
+  if (hols.length === 0) {
+    listEl.innerHTML = `<p style="font-size:12px;color:var(--muted);padding:4px 0">No public holidays in this range.</p>`;
+  } else {
+    listEl.innerHTML = hols.map(h => {
+      const d = new Date(h.date + 'T00:00:00');
+      const label = d.toLocaleDateString('en-GB', { day:'numeric', month:'short', weekday:'short' });
+      return `<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;background:var(--surface);border:0.5px solid var(--border)">
+        <div style="width:8px;height:8px;border-radius:50%;background:var(--blue);flex-shrink:0"></div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12.5px;font-weight:600;color:var(--text)">${h.name}</div>
+          <div style="font-size:11px;color:var(--muted)">${label}</div>
+        </div>
+        <span style="font-size:10px;padding:2px 7px;border-radius:20px;background:var(--blue-light);color:var(--blue);font-weight:700;text-transform:uppercase;letter-spacing:0.3px">${h.type || 'Holiday'}</span>
+      </div>`;
+    }).join('');
+  }
+  panel.style.display = 'block';
+  checkIdleHint();
+}
+
+// ── Team panel ───────────────────────────────────────────────────────────────
+const avatarColors = [
+  ['#FEF3C7','#D97706'],['#EFF6FF','#1D4ED8'],['#F0FDF4','#15803D'],
+  ['#FDF4FF','#9333EA'],['#FFF7ED','#C2410C'],['#F0FDFA','#0F766E'],
+];
+
+function updateTeamPanel() {
+  const from = document.getElementById('fromDate').value;
+  const to   = document.getElementById('toDate').value;
+  const panel = document.getElementById('teamPanel');
+  if (!from || !to || to < from) { panel.style.display='none'; checkIdleHint(); return; }
+
+  // Find team members on leave during the selected range
+  const overlapping = teamLeaves.filter(lr =>
+    lr.from_date <= to && lr.to_date >= from
+  );
+
+  const countEl = document.getElementById('teamAwayCount');
+  countEl.textContent = overlapping.length + ' away';
+
+  const listEl = document.getElementById('teamList');
+  if (overlapping.length === 0) {
+    listEl.innerHTML = `<p style="font-size:12px;color:var(--muted);padding:4px 0">No teammates on leave during this period.</p>`;
+  } else {
+    listEl.innerHTML = overlapping.map((lr, i) => {
+      const [bg, fg] = avatarColors[i % avatarColors.length];
+      const cls = leaveClass[lr.leave_type] || 'annual';
+      const pillColors = {
+        annual:        ['var(--amber-light)','var(--amber-dark)'],
+        sick:          ['#FEE2E2','#B91C1C'],
+        maternity:     ['#F5F3FF','#7C3AED'],
+        paternity:     ['var(--blue-light)','var(--blue)'],
+        emergency:         ['#FEE2E2','#B91C1C'],
+        compassionate: ['#FEF3C7','#92400E'],
+      };
+      const [pbg, pfg] = pillColors[cls] || pillColors.annual;
+      const fromD = new Date(lr.from_date + 'T00:00:00').toLocaleDateString('en-GB', {day:'numeric',month:'short'});
+      const toD   = new Date(lr.to_date   + 'T00:00:00').toLocaleDateString('en-GB', {day:'numeric',month:'short'});
+      return `<div style="display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:9px;border:0.5px solid var(--border);background:var(--card);position:relative;overflow:hidden">
+        <div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:${pfg}"></div>
+        <div style="width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;background:${bg};color:${fg}">${lr.initials}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12.5px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${lr.emp_name}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:1px">${fromD} → ${toD} · ${lr.days}d</div>
+        </div>
+        <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;text-transform:uppercase;letter-spacing:0.3px;background:${pbg};color:${pfg}">${lr.leave_type.replace(' Leave','')}</span>
+      </div>`;
+    }).join('');
+  }
+  panel.style.display = 'block';
+  checkIdleHint();
+}
+
+// ── Idle hint ────────────────────────────────────────────────────────────────
+function checkIdleHint() {
+  const anyVisible =
+    document.getElementById('policyPanel').style.display !== 'none' ||
+    document.getElementById('holidayPanel').style.display !== 'none' ||
+    document.getElementById('teamPanel').style.display !== 'none';
+  document.getElementById('idleHint').style.display = anyVisible ? 'none' : 'block';
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+document.getElementById('fromDate').min = new Date().toISOString().slice(0,10);
+document.getElementById('toDate').min   = new Date().toISOString().slice(0,10);
+document.getElementById('fromDate').addEventListener('change', function() {
+  document.getElementById('toDate').min = this.value;
+});
+</script>
+{% endblock %}

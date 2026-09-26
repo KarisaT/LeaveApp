@@ -1,0 +1,29 @@
+version: "3.9"
+
+services:
+  leave-app:
+    build:
+      context: .          # folder containing Dockerfile + your app
+      dockerfile: Dockerfile
+    container_name: leave_app
+    restart: unless-stopped
+    ports:
+      - "5000:5000"       # host:container — change left side to use a different host port
+    environment:
+      # ⚠️  Change SECRET_KEY before deploying — use a long random string
+      SECRET_KEY: "change-me-before-deploy-use-a-long-random-string"
+      FLASK_ENV: production
+      DATABASE_PATH: /app/data/leave.db
+    volumes:
+      # Persists the SQLite database across container restarts
+      - leave_data:/app/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/login')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  leave_data:
+    driver: local

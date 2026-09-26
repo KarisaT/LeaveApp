@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block page_title %}My Leave{% endblock %}
+{% block content %}
+
+{% if success %}
+<div class="alert alert-success"><i class="ti ti-circle-check"></i> Your leave application has been submitted successfully.</div>
+{% endif %}
+
+<div class="balance-grid">
+  {% set bal_items = [
+    ('Annual Leave',        balances.annual,        21, 'var(--ct-orange)'),
+    ('Sick Leave',          balances.sick,           7, 'var(--ct-blue)'),
+    ('Emergency Leave',         balances.emergency,          5, '#1D8A7A'),
+    ('Compassionate Leave', balances.compassionate,  3, '#7B5EA7'),
+  ] %}
+  {% for label, rem, total, color in bal_items %}
+  <div class="balance-card">
+    <div class="balance-type">{{ label }}</div>
+    <div class="balance-num" style="color:{{ color }}">
+      {{ rem }} <small style="font-size:14px;color:var(--muted)">/ {{ total }}</small>
+    </div>
+    <div class="balance-total">{{ total - rem }} used</div>
+    <div class="progress-bar">
+      <div class="progress-fill" style="width:{{ ((total - rem) / total * 100)|int }}%;background:{{ color }}"></div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">Leave History</span>
+    <a href="/apply" class="btn btn-primary btn-sm"><i class="ti ti-plus"></i> New Application</a>
+  </div>
+  {% if requests %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Type</th><th>From</th><th>To</th><th>Days</th><th>Applied</th><th>Status</th><th>Action</th></tr>
+      </thead>
+      <tbody>
+        {% for req in requests %}
+        <tr>
+          <td>
+            {{ req.leave_type }}
+            {% if req.sick_form_filename %}
+            <div style="margin-top:3px">
+              <a href="/static/uploads/{{ req.sick_form_filename }}" target="_blank" style="font-size:11px;color:var(--blue);text-decoration:none;display:inline-flex;align-items:center;gap:3px">
+                <i class="ti ti-paperclip" style="font-size:11px"></i> Sick Form
+              </a>
+            </div>
+            {% endif %}
+          </td>
+          <td>{{ req.from_date }}</td>
+          <td>{{ req.to_date }}</td>
+          <td><strong>{{ req.days }}</strong></td>
+          <td style="color:var(--muted)">{{ req.applied }}</td>
+          <td>
+            <span class="badge badge-{{ req.status }}">{{ req.status }}</span>
+            {% if req.status == 'rejected' and req.rejection_reason %}
+            <div style="font-size:11px;color:var(--muted);margin-top:3px">{{ req.rejection_reason }}</div>
+            {% endif %}
+          </td>
+          <td>
+            {% if req.status in ('pending', 'approved') %}
+            <form method="POST" action="/cancel/{{ req.id }}"
+                  onsubmit="return confirm('Cancel this leave request?')">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn btn-sm" style="color:var(--red);border-color:var(--red)">
+                <i class="ti ti-x"></i> Cancel
+              </button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p style="font-size:13px;color:var(--muted);text-align:center;padding:32px 0">
+    No leave applications yet. <a href="/apply" style="color:var(--ct-orange)">Apply now</a>
+  </p>
+  {% endif %}
+</div>
+{% endblock %}

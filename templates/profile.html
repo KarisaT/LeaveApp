@@ -1,0 +1,268 @@
+{% extends "base.html" %}
+{% block page_title %}My Profile{% endblock %}
+{% block content %}
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for cat, msg in messages %}
+  <div class="alert-{{ 'success' if cat == 'success' else 'error' }}" style="margin-bottom:16px;padding:10px 14px;border-radius:8px;font-size:13px;display:flex;align-items:center;gap:8px;
+    {% if cat == 'success' %}background:#e8f5e9;color:#1b5e20;border:0.5px solid #a5d6a7;{% else %}background:#FEEBEB;color:#8B0000;border:0.5px solid #F5A5A5;{% endif %}">
+    <i class="ti ti-{{ 'circle-check' if cat == 'success' else 'alert-circle' }}"></i> {{ msg }}
+  </div>
+  {% endfor %}
+{% endwith %}
+
+<div style="display:flex;gap:24px;align-items:flex-start">
+<!-- ── LEFT COLUMN ───────────────────────────────────────────────────── -->
+<div style="flex:0 0 520px;min-width:0">
+
+<!-- ── Profile card ──────────────────────────────────────────────────── -->
+<div class="card" style="margin-bottom:20px">
+  <div style="display:flex;align-items:center;gap:18px;margin-bottom:24px;padding-bottom:20px;border-bottom:0.5px solid var(--border)">
+    <div style="width:64px;height:64px;border-radius:50%;background:var(--ct-orange);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#fff">{{ user.initials }}</div>
+    <div>
+      <div style="font-size:20px;font-weight:700">{{ user.name }}</div>
+      <div style="font-size:13px;color:var(--muted)">{{ user.role_title }} · {{ user.dept }}</div>
+      <div style="font-size:12px;color:var(--ct-orange);margin-top:2px">{{ roles[role].label }}</div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px">
+    {% for label, value in [('Email', user.email), ('Phone', user.phone or '—'), ('Department', user.dept), ('Job Title', user.role_title), ('Start Date', user.start_date), ('Employee ID', 'CT-00' ~ user.id)] %}
+    <div>
+      <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">{{ label }}</div>
+      <div style="font-size:13px;font-weight:500">{{ value }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  <div style="border-top:0.5px solid var(--border);padding-top:18px">
+    <div style="font-size:13px;font-weight:600;margin-bottom:12px">Leave Balances</div>
+    <div class="balance-grid">
+      <div class="balance-card">
+        <div class="balance-type">Annual</div>
+        <div class="balance-num orange">{{ balances.annual or 0 }}</div>
+        <div class="balance-total">days left</div>
+      </div>
+      <div class="balance-card">
+        <div class="balance-type">Sick</div>
+        <div class="balance-num blue">{{ balances.sick or 0 }}</div>
+        <div class="balance-total">days left</div>
+      </div>
+      <div class="balance-card">
+        <div class="balance-type">Emergency</div>
+        <div class="balance-num" style="color:#1D8A7A">{{ balances.emergency or 0 }}</div>
+        <div class="balance-total">days left</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Update Contact Details ────────────────────────────────────────── -->
+<div class="card" style="margin-bottom:20px">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;padding-bottom:16px;border-bottom:0.5px solid var(--border)">
+    <i class="ti ti-user-edit" style="font-size:20px;color:var(--ct-orange)"></i>
+    <span style="font-size:15px;font-weight:600">Update Contact Details</span>
+  </div>
+  <p style="font-size:12.5px;color:var(--muted);margin-bottom:18px;margin-top:-8px">
+    You can update your email address here. Other details (name, department, job title) must be changed by HR.
+  </p>
+  <form method="POST" action="{{ url_for('general.update_profile') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div style="margin-bottom:16px">
+      <label style="display:block;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">
+        Email Address
+      </label>
+      <div style="position:relative">
+        <i class="ti ti-mail" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:15px"></i>
+        <input type="email" name="email" class="form-control" style="padding-left:32px"
+               value="{{ user.email }}" placeholder="your@email.com" required>
+      </div>
+    </div>
+
+    <div style="margin-bottom:16px">
+      <label style="display:block;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">
+        Phone Number
+      </label>
+      <div style="position:relative">
+        <i class="ti ti-phone" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:15px"></i>
+        <input type="tel" name="phone" class="form-control" style="padding-left:32px"
+               value="{{ user.phone or '' }}" placeholder="+254 7XX XXX XXX">
+      </div>
+    </div>
+
+    <button type="submit" class="btn-primary" style="width:auto;padding:9px 20px">
+      <i class="ti ti-device-floppy"></i> Save Changes
+    </button>
+  </form>
+</div>
+
+<!-- ── Change Password ─────────────────────────────────────────────── -->
+<div class="card" style="max-width:520px">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;padding-bottom:16px;border-bottom:0.5px solid var(--border)">
+    <i class="ti ti-lock-password" style="font-size:20px;color:var(--ct-orange)"></i>
+    <span style="font-size:15px;font-weight:600">Change Password</span>
+  </div>
+  <p style="font-size:12.5px;color:var(--muted);margin-bottom:18px;margin-top:-8px">
+    A confirmation email will be sent to your registered address when your password is changed.
+  </p>
+  <form method="POST" action="{{ url_for('general.change_password') }}" id="pwForm">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div style="margin-bottom:14px">
+      <label style="display:block;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Current Password</label>
+      <div style="position:relative">
+        <i class="ti ti-lock" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:15px"></i>
+        <input type="password" name="current_password" class="form-control" style="padding-left:32px" placeholder="••••••••" autocomplete="current-password" required>
+      </div>
+    </div>
+    <div style="margin-bottom:14px">
+      <label style="display:block;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">New Password</label>
+      <div style="position:relative">
+        <i class="ti ti-lock-open" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:15px"></i>
+        <input type="password" name="new_password" id="newPw" class="form-control" style="padding-left:32px" placeholder="Min. 8 characters" autocomplete="new-password" required minlength="8">
+      </div>
+    </div>
+    <div style="margin-bottom:18px">
+      <label style="display:block;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Confirm New Password</label>
+      <div style="position:relative">
+        <i class="ti ti-lock-check" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:15px"></i>
+        <input type="password" name="confirm_password" id="confirmPw" class="form-control" style="padding-left:32px" placeholder="Repeat new password" autocomplete="new-password" required minlength="8">
+      </div>
+      <div id="pwMismatch" style="display:none;color:#C62828;font-size:12px;margin-top:4px"><i class="ti ti-alert-circle"></i> Passwords do not match</div>
+    </div>
+    <button type="submit" class="btn-primary" style="width:auto;padding:9px 20px">
+      <i class="ti ti-device-floppy"></i> Update Password
+    </button>
+  </form>
+</div>
+
+<script>
+document.getElementById('pwForm').addEventListener('submit', function(e) {
+  const np = document.getElementById('newPw').value;
+  const cp = document.getElementById('confirmPw').value;
+  if (np !== cp) {
+    e.preventDefault();
+    document.getElementById('pwMismatch').style.display = 'block';
+  }
+});
+document.getElementById('confirmPw').addEventListener('input', function() {
+  const match = this.value === document.getElementById('newPw').value;
+  document.getElementById('pwMismatch').style.display = match ? 'none' : 'block';
+});
+</script>
+
+</div><!-- end left column -->
+
+<!-- ── RIGHT PANEL ──────────────────────────────────────────────────── -->
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:18px">
+
+  <!-- Quick Actions -->
+  <div class="card">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;padding-bottom:12px;border-bottom:0.5px solid var(--border)">
+      <i class="ti ti-bolt" style="font-size:18px;color:var(--ct-orange)"></i>
+      <span style="font-size:14px;font-weight:600">Quick Actions</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <a href="{{ url_for('leave.apply_leave') }}" style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surface);border-radius:8px;text-decoration:none;border:0.5px solid var(--border);transition:border-color 0.15s" onmouseover="this.style.borderColor='var(--ct-orange)'" onmouseout="this.style.borderColor='var(--border)'">
+        <div style="width:36px;height:36px;border-radius:8px;background:#FFF3E0;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <i class="ti ti-calendar-plus" style="color:var(--ct-orange);font-size:18px"></i>
+        </div>
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--text)">Apply for Leave</div>
+          <div style="font-size:11px;color:var(--muted)">Submit a new leave request</div>
+        </div>
+        <i class="ti ti-chevron-right" style="margin-left:auto;color:var(--muted);font-size:14px"></i>
+      </a>
+      <a href="{{ url_for('leave.my_leave') }}" style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surface);border-radius:8px;text-decoration:none;border:0.5px solid var(--border);transition:border-color 0.15s" onmouseover="this.style.borderColor='var(--blue-mid)'" onmouseout="this.style.borderColor='var(--border)'">
+        <div style="width:36px;height:36px;border-radius:8px;background:#EFF6FF;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <i class="ti ti-list-details" style="color:var(--blue-mid);font-size:18px"></i>
+        </div>
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--text)">My Leave History</div>
+          <div style="font-size:11px;color:var(--muted)">View all your leave requests</div>
+        </div>
+        <i class="ti ti-chevron-right" style="margin-left:auto;color:var(--muted);font-size:14px"></i>
+      </a>
+      <a href="{{ url_for('general.calendar') }}" style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surface);border-radius:8px;text-decoration:none;border:0.5px solid var(--border);transition:border-color 0.15s" onmouseover="this.style.borderColor='#1D8A7A'" onmouseout="this.style.borderColor='var(--border)'">
+        <div style="width:36px;height:36px;border-radius:8px;background:#E6F7F5;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <i class="ti ti-calendar-month" style="color:#1D8A7A;font-size:18px"></i>
+        </div>
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--text)">Leave Calendar</div>
+          <div style="font-size:11px;color:var(--muted)">See who's off and when</div>
+        </div>
+        <i class="ti ti-chevron-right" style="margin-left:auto;color:var(--muted);font-size:14px"></i>
+      </a>
+    </div>
+  </div>
+
+  <!-- Leave Summary -->
+  <div class="card">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;padding-bottom:12px;border-bottom:0.5px solid var(--border)">
+      <i class="ti ti-chart-bar" style="font-size:18px;color:var(--ct-orange)"></i>
+      <span style="font-size:14px;font-weight:600">Leave Summary</span>
+    </div>
+    {% set total_annual = 21 %}
+    {% set used_annual = total_annual - (balances.annual or 0) %}
+    {% set annual_pct = ((used_annual / total_annual) * 100) | int %}
+    {% set total_sick = 30 %}
+    {% set used_sick = total_sick - (balances.sick or 0) %}
+    {% set sick_pct = ((used_sick / total_sick) * 100) | int %}
+    <div style="margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+        <span style="font-size:12px;font-weight:500;color:var(--text)">Annual Leave</span>
+        <span style="font-size:12px;color:var(--muted)">{{ used_annual }} used / {{ total_annual }} total</span>
+      </div>
+      <div style="height:7px;background:var(--surface);border-radius:99px;overflow:hidden;border:0.5px solid var(--border)">
+        <div style="height:100%;width:{{ annual_pct }}%;background:var(--ct-orange);border-radius:99px;transition:width 0.4s"></div>
+      </div>
+    </div>
+    <div style="margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+        <span style="font-size:12px;font-weight:500;color:var(--text)">Sick Leave</span>
+        <span style="font-size:12px;color:var(--muted)">{{ used_sick }} used / {{ total_sick }} total</span>
+      </div>
+      <div style="height:7px;background:var(--surface);border-radius:99px;overflow:hidden;border:0.5px solid var(--border)">
+        <div style="height:100%;width:{{ sick_pct }}%;background:var(--blue-mid);border-radius:99px;transition:width 0.4s"></div>
+      </div>
+    </div>
+    <div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+        <span style="font-size:12px;font-weight:500;color:var(--text)">Emergency Leave</span>
+        <span style="font-size:12px;color:var(--muted)">{{ 3 - (balances.emergency or 0) }} used / 3 total</span>
+      </div>
+      <div style="height:7px;background:var(--surface);border-radius:99px;overflow:hidden;border:0.5px solid var(--border)">
+        {% set emg_pct = (((3 - (balances.emergency or 0)) / 3) * 100) | int %}
+        <div style="height:100%;width:{{ emg_pct }}%;background:#1D8A7A;border-radius:99px;transition:width 0.4s"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Account Info -->
+  <div class="card">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;padding-bottom:12px;border-bottom:0.5px solid var(--border)">
+      <i class="ti ti-shield-check" style="font-size:18px;color:var(--ct-orange)"></i>
+      <span style="font-size:14px;font-weight:600">Account Info</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:12.5px;color:var(--muted)">Account Role</span>
+        <span style="font-size:12.5px;font-weight:600;padding:3px 10px;background:var(--amber-light);color:var(--amber-dark);border-radius:99px">{{ roles[role].label }}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:12.5px;color:var(--muted)">Employee Since</span>
+        <span style="font-size:12.5px;font-weight:600">{{ user.start_date }}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:12.5px;color:var(--muted)">Employee ID</span>
+        <span style="font-size:12.5px;font-weight:600">CT-00{{ user.id }}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:12.5px;color:var(--muted)">Department</span>
+        <span style="font-size:12.5px;font-weight:600">{{ user.dept }}</span>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end right panel -->
+</div><!-- end two-col wrapper -->
+
+{% endblock %}

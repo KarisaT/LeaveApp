@@ -1,0 +1,290 @@
+{% extends "base.html" %}
+{% block page_title %}{% if role in ['hr', 'manager'] %}All Requests{% else %}Leave Approvals{% endif %}{% endblock %}
+{% block content %}
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for cat, msg in messages %}
+  <div style="max-width:100%;margin-bottom:14px;padding:10px 14px;border-radius:8px;font-size:13px;display:flex;align-items:center;gap:8px;
+    {% if cat == 'success' %}background:#e8f5e9;color:#1b5e20;border:0.5px solid #a5d6a7;{% else %}background:#FEEBEB;color:#8B0000;border:0.5px solid #F5A5A5;{% endif %}">
+    <i class="ti ti-{{ 'circle-check' if cat == 'success' else 'alert-circle' }}"></i> {{ msg }}
+  </div>
+  {% endfor %}
+{% endwith %}
+
+{% if active_delegations %}
+<div style="background:#FFFBEB;border:1.5px solid #FDE68A;border-left:4px solid #D97706;border-radius:10px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:flex-start;gap:12px">
+  <i class="ti ti-transfer" style="color:#D97706;font-size:20px;margin-top:2px"></i>
+  <div>
+    <div style="font-weight:700;font-size:13px;color:#92400E;margin-bottom:4px">You are acting as delegate approver</div>
+    {% for d in active_delegations %}
+    <div style="font-size:12.5px;color:#78350F">
+      Covering <strong>{{ d.manager_name }}</strong> from {{ d.from_date }} to {{ d.to_date }}
+      {% if d.reason %} — {{ d.reason }}{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Main form wraps the table so checkboxes + bulk actions share the same form -->
+<form id="bulkForm" method="POST" action="">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+  <div class="card">
+    <div class="card-header" style="flex-wrap:wrap;gap:10px">
+      <span class="card-title">Leave Requests</span>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+
+        <!-- Filters (GET, outside the POST form) -->
+        <form method="GET" style="display:flex;gap:8px">
+          <select name="status" class="form-control" style="width:140px;font-size:12px;padding:5px 10px" onchange="this.form.submit()">
+            <option value="all"      {% if status_filter=='all' %}selected{% endif %}>All statuses</option>
+            <option value="pending"  {% if status_filter=='pending' %}selected{% endif %}>Pending</option>
+            <option value="approved" {% if status_filter=='approved' %}selected{% endif %}>Approved</option>
+            <option value="rejected" {% if status_filter=='rejected' %}selected{% endif %}>Rejected</option>
+          </select>
+          <select name="type" class="form-control" style="width:150px;font-size:12px;padding:5px 10px" onchange="this.form.submit()">
+            <option value="all"                       {% if type_filter=='all' %}selected{% endif %}>All types</option>
+            <option value="Annual Leave"              {% if type_filter=='Annual Leave' %}selected{% endif %}>Annual</option>
+            <option value="Sick Leave"                {% if type_filter=='Sick Leave' %}selected{% endif %}>Sick</option>
+            <option value="Maternity/Paternity Leave" {% if type_filter=='Maternity/Paternity Leave' %}selected{% endif %}>Maternity/Paternity</option>
+            <option value="Emergency Leave"           {% if type_filter=='Emergency Leave' %}selected{% endif %}>Emergency</option>
+          </select>
+        </form>
+      </div>
+    </div>
+
+    <!-- ── Bulk action toolbar (hidden until at least one checkbox is ticked) ── -->
+    <div id="bulkBar"
+         style="display:none;align-items:center;gap:10px;padding:10px 16px;
+                background:#F0F4FF;border-bottom:1px solid var(--border);font-size:13px">
+      <span id="bulkCount" style="font-weight:600;color:var(--blue)">0 selected</span>
+      <button type="button" class="btn btn-sm"
+              style="background:#16A34A;color:#fff;border:none;padding:5px 14px;border-radius:6px;cursor:pointer"
+              onclick="submitBulk('{{ url_for('leave.bulk_approve') }}')">
+        <i class="ti ti-checks"></i> Approve Selected
+      </button>
+      <button type="button" class="btn btn-sm"
+              style="background:#DC2626;color:#fff;border:none;padding:5px 14px;border-radius:6px;cursor:pointer"
+              onclick="openBulkRejectModal()">
+        <i class="ti ti-x"></i> Reject Selected
+      </button>
+    </div>
+
+    {% if requests %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <!-- Select-all checkbox — only visible when pending requests exist -->
+            {% set has_pending = requests | selectattr('status', 'equalto', 'pending') | list %}
+            <th style="width:36px">
+              {% if has_pending %}
+              <input type="checkbox" id="selectAll" title="Select all pending"
+                     style="cursor:pointer;width:15px;height:15px">
+              {% endif %}
+            </th>
+            <th>Employee</th><th>Type</th><th>From</th><th>To</th>
+            <th>Days</th><th>Applied</th><th>Status</th><th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for req in requests %}
+          <tr id="row-{{ req.id }}">
+            <td>
+              {% if req.status == 'pending' %}
+              <input type="checkbox" name="req_ids" value="{{ req.id }}" class="row-check"
+                     style="cursor:pointer;width:15px;height:15px">
+              {% endif %}
+            </td>
+            <td>
+              <div class="emp-cell">
+                <div class="emp-avatar" style="background:var(--ct-blue-light);color:var(--ct-blue)">{{ req.employee.initials }}</div>
+                <div>
+                  <div style="font-size:13px;font-weight:600">{{ req.employee.name }}</div>
+                  <div class="emp-dept">{{ req.employee.dept }}</div>
+                </div>
+              </div>
+            </td>
+            <td>
+              {{ req.leave_type }}
+              {% if req.sick_form_filename %}
+              <div style="margin-top:3px">
+                <a href="/static/uploads/{{ req.sick_form_filename }}" target="_blank"
+                   style="font-size:11px;color:var(--blue);text-decoration:none;display:inline-flex;align-items:center;gap:3px">
+                  <i class="ti ti-paperclip" style="font-size:11px"></i> Sick Form
+                </a>
+              </div>
+              {% endif %}
+            </td>
+            <td>{{ req.from_date }}</td>
+            <td>{{ req.to_date }}</td>
+            <td><strong>{{ req.days }}</strong></td>
+            <td style="color:var(--muted)">{{ req.applied_date }}</td>
+            <td>
+              <span class="badge badge-{{ req.status }}">{{ req.status }}</span>
+              {% if req.status == 'rejected' and req.rejection_reason %}
+              <div style="font-size:11px;color:var(--muted);margin-top:3px;max-width:160px">{{ req.rejection_reason }}</div>
+              {% endif %}
+            </td>
+            <td>
+              {% if req.status == 'pending' %}
+              <div class="req-actions">
+                <!-- Single approve -->
+                <form method="POST" action="/approve/{{ req.id }}" style="display:inline">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="action-btn action-approve" title="Approve">
+                    <i class="ti ti-check"></i>
+                  </button>
+                </form>
+                <!-- Single reject → modal -->
+                <button class="action-btn action-reject" title="Reject"
+                        onclick="openRejectModal({{ req.id }}, '{{ req.employee.name }}', '{{ req.leave_type }}')">
+                  <i class="ti ti-x"></i>
+                </button>
+              </div>
+              {% else %}
+              <span style="font-size:11px;color:var(--hint)">—</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p style="font-size:13px;color:var(--muted);text-align:center;padding:32px 0">No requests match the selected filters.</p>
+    {% endif %}
+  </div><!-- /card -->
+
+</form><!-- /bulkForm -->
+
+<!-- ── Single-reject modal ──────────────────────────────────────────────── -->
+<div id="rejectModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:999;align-items:center;justify-content:center">
+  <div style="background:var(--card);border-radius:12px;padding:24px;width:100%;max-width:420px;margin:24px">
+    <div style="font-size:15px;font-weight:600;margin-bottom:4px">Reject Leave Request</div>
+    <div id="rejectSubtitle" style="font-size:13px;color:var(--muted);margin-bottom:18px"></div>
+    <form id="rejectForm" method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="form-group">
+        <label class="form-label">Reason for rejection <span style="font-weight:400;color:var(--hint)">(optional)</span></label>
+        <textarea name="rejection_reason" class="form-control" rows="3"
+                  placeholder="e.g. Team at minimum headcount during this period..."></textarea>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button type="button" class="btn" onclick="closeRejectModal()">Cancel</button>
+        <button type="submit" class="btn btn-danger"><i class="ti ti-x"></i> Confirm Reject</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ── Bulk-reject modal ────────────────────────────────────────────────── -->
+<div id="bulkRejectModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:999;align-items:center;justify-content:center">
+  <div style="background:var(--card);border-radius:12px;padding:24px;width:100%;max-width:420px;margin:24px">
+    <div style="font-size:15px;font-weight:600;margin-bottom:4px">Reject Selected Requests</div>
+    <div id="bulkRejectSubtitle" style="font-size:13px;color:var(--muted);margin-bottom:18px"></div>
+    <div class="form-group">
+      <label class="form-label">Shared reason <span style="font-weight:400;color:var(--hint)">(optional)</span></label>
+      <textarea id="bulkRejectReason" class="form-control" rows="3"
+                placeholder="e.g. Team at minimum headcount during this period..."></textarea>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button type="button" class="btn" onclick="closeBulkRejectModal()">Cancel</button>
+      <button type="button" class="btn btn-danger"
+              onclick="submitBulkReject()">
+        <i class="ti ti-x"></i> Reject All Selected
+      </button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Single-reject modal ───────────────────────────────────────────────────
+function openRejectModal(id, name, type) {
+  document.getElementById('rejectSubtitle').textContent = name + ' — ' + type;
+  document.getElementById('rejectForm').action = '/reject/' + id;
+  document.getElementById('rejectModal').style.display = 'flex';
+}
+function closeRejectModal() {
+  document.getElementById('rejectModal').style.display = 'none';
+}
+document.getElementById('rejectModal').addEventListener('click', function(e) {
+  if (e.target === this) closeRejectModal();
+});
+
+// ── Checkbox logic ────────────────────────────────────────────────────────
+const selectAll = document.getElementById('selectAll');
+const rowChecks = () => document.querySelectorAll('.row-check');
+const bulkBar   = document.getElementById('bulkBar');
+const bulkCount = document.getElementById('bulkCount');
+
+function updateBulkBar() {
+  const checked = [...rowChecks()].filter(c => c.checked);
+  if (checked.length > 0) {
+    bulkBar.style.display = 'flex';
+    bulkCount.textContent = checked.length + ' selected';
+  } else {
+    bulkBar.style.display = 'none';
+  }
+  if (selectAll) {
+    const all = rowChecks();
+    selectAll.indeterminate = checked.length > 0 && checked.length < all.length;
+    selectAll.checked = all.length > 0 && checked.length === all.length;
+  }
+}
+
+if (selectAll) {
+  selectAll.addEventListener('change', function() {
+    rowChecks().forEach(c => c.checked = this.checked);
+    updateBulkBar();
+  });
+}
+document.querySelectorAll('.row-check').forEach(c => {
+  c.addEventListener('change', updateBulkBar);
+});
+
+// ── Bulk approve ──────────────────────────────────────────────────────────
+function submitBulk(action) {
+  const checked = [...rowChecks()].filter(c => c.checked);
+  if (checked.length === 0) return;
+  const form = document.getElementById('bulkForm');
+  form.action = action;
+  form.submit();
+}
+
+// ── Bulk-reject modal ─────────────────────────────────────────────────────
+function openBulkRejectModal() {
+  const checked = [...rowChecks()].filter(c => c.checked);
+  if (checked.length === 0) return;
+  document.getElementById('bulkRejectSubtitle').textContent =
+    checked.length + ' request(s) will be rejected.';
+  document.getElementById('bulkRejectReason').value = '';
+  document.getElementById('bulkRejectModal').style.display = 'flex';
+}
+function closeBulkRejectModal() {
+  document.getElementById('bulkRejectModal').style.display = 'none';
+}
+document.getElementById('bulkRejectModal').addEventListener('click', function(e) {
+  if (e.target === this) closeBulkRejectModal();
+});
+function submitBulkReject() {
+  const reason = document.getElementById('bulkRejectReason').value;
+  const form   = document.getElementById('bulkForm');
+  // Inject the reason as a hidden field then submit
+  let inp = form.querySelector('input[name="bulk_rejection_reason"]');
+  if (!inp) {
+    inp = document.createElement('input');
+    inp.type = 'hidden';
+    inp.name = 'bulk_rejection_reason';
+    form.appendChild(inp);
+  }
+  inp.value = reason;
+  form.action = '{{ url_for("leave.bulk_reject") }}';
+  form.submit();
+}
+</script>
+{% endblock %}

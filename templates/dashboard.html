@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% block page_title %}Dashboard{% endblock %}
+{% block content %}
+
+{% if role == 'employee' %}
+<div class="stats-grid">
+  <div class="stat-card"><div class="stat-label">Annual Balance</div><div class="stat-value orange">{{ stats.balances.annual }}</div><div class="stat-sub">days remaining</div></div>
+  <div class="stat-card"><div class="stat-label">Sick Leave</div><div class="stat-value blue">{{ stats.balances.sick }}</div><div class="stat-sub">days remaining</div></div>
+  <div class="stat-card"><div class="stat-label">Pending</div><div class="stat-value orange">{{ stats.pending_count }}</div><div class="stat-sub">applications</div></div>
+  <div class="stat-card"><div class="stat-label">Emergency Leave</div><div class="stat-value" style="color:#1D8A7A">{{ stats.balances.emergency }}</div><div class="stat-sub">days remaining</div></div>
+</div>
+{% elif role == 'manager' %}
+<div class="stats-grid">
+  <div class="stat-card"><div class="stat-label">Pending Approvals</div><div class="stat-value orange">{{ stats.pending_count }}</div><div class="stat-sub">need review</div></div>
+  <div class="stat-card"><div class="stat-label">On Leave Today</div><div class="stat-value blue">{{ stats.on_leave }}</div><div class="stat-sub">team members</div></div>
+  <div class="stat-card"><div class="stat-label">Total Staff</div><div class="stat-value">{{ stats.total_staff }}</div><div class="stat-sub">employees</div></div>
+  <div class="stat-card"><div class="stat-label">Your Balance</div><div class="stat-value green">{{ stats.balances.annual }}</div><div class="stat-sub">annual days left</div></div>
+</div>
+{% elif role in ['hr', 'manager'] %}
+<div class="stats-grid">
+  <div class="stat-card"><div class="stat-label">Total Staff</div><div class="stat-value blue">{{ stats.total_staff }}</div><div class="stat-sub">active employees</div></div>
+  <div class="stat-card"><div class="stat-label">On Leave Today</div><div class="stat-value orange">{{ stats.on_leave }}</div><div class="stat-sub">employees</div></div>
+  <div class="stat-card"><div class="stat-label">Pending Requests</div><div class="stat-value orange">{{ stats.pending_count }}</div><div class="stat-sub">awaiting action</div></div>
+  <div class="stat-card"><div class="stat-label">Approval Rate</div><div class="stat-value green">87%</div><div class="stat-sub">year to date</div></div>
+</div>
+{% else %}
+<div class="stats-grid">
+  <div class="stat-card"><div class="stat-label">Staff on Leave</div><div class="stat-value orange">{{ stats.on_leave }}</div><div class="stat-sub">this week</div></div>
+  <div class="stat-card"><div class="stat-label">Pending Requests</div><div class="stat-value blue">{{ stats.pending_count }}</div><div class="stat-sub">org-wide</div></div>
+  <div class="stat-card"><div class="stat-label">Unpaid Leave</div><div class="stat-value red">0</div><div class="stat-sub">this month</div></div>
+  <div class="stat-card"><div class="stat-label">Payroll Impact</div><div class="stat-value green">Normal</div><div class="stat-sub">no anomalies</div></div>
+</div>
+{% endif %}
+
+<div class="two-col">
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Pending Requests</span>
+      <a href="/approvals" class="btn btn-sm btn-ghost" style="color:var(--ct-blue);font-size:12px">View all</a>
+    </div>
+    {% if recent_requests %}
+    <div class="request-list">
+      {% for req in recent_requests %}
+      <div class="request-item">
+        <div class="emp-avatar" style="background:#E6EEFA;color:var(--ct-blue);width:32px;height:32px">{{ req.employee.initials }}</div>
+        <div class="req-info">
+          <div class="req-name">{{ req.employee.name }}</div>
+          <div class="req-detail">{{ req.leave_type }} · {{ req.from_date }} – {{ req.to_date }}</div>
+        </div>
+        <span style="font-size:12px;font-weight:600;color:var(--ct-blue);white-space:nowrap">{{ req.days }}d</span>
+        <span class="badge badge-pending">pending</span>
+        {% if role in ['manager','hr'] %}
+        <div class="req-actions">
+          <a href="/approve/{{ req.id }}" class="action-btn action-approve" title="Approve"><i class="ti ti-check"></i></a>
+          <a href="/reject/{{ req.id }}" class="action-btn action-reject" title="Reject"><i class="ti ti-x"></i></a>
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p style="font-size:13px;color:var(--muted);text-align:center;padding:24px 0">No pending requests</p>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">
+        <i class="ti ti-beach" style="margin-right:6px;color:var(--ct-blue)"></i>
+        Leave Usage Breakdown
+      </span>
+    </div>
+    <div class="chart-bar-wrap">
+      <div class="chart-row"><div class="chart-label">Annual</div><div class="chart-bar-bg"><div class="chart-bar-fill orange" style="width:65%"><span class="chart-val">65%</span></div></div></div>
+      <div class="chart-row"><div class="chart-label">Sick</div><div class="chart-bar-bg"><div class="chart-bar-fill blue" style="width:28%"><span class="chart-val">28%</span></div></div></div>
+      <div class="chart-row"><div class="chart-label">Maternity</div><div class="chart-bar-bg"><div class="chart-bar-fill teal" style="width:14%"><span class="chart-val">14%</span></div></div></div>
+      <div class="chart-row"><div class="chart-label">Emergency</div><div class="chart-bar-bg"><div class="chart-bar-fill gray" style="width:6%"></div></div></div>
+    </div>
+  </div>
+</div>
+
+
+{# ── Avatar gradient palette — cycles through 8 warm/cool combos ── #}
+{% set avatar_gradients = [
+  ('linear-gradient(135deg,#E6EEFA,#c8d9f5)', '#1A4FA0'),
+  ('linear-gradient(135deg,#FEF0E6,#f5c9a0)', '#B84D05'),
+  ('linear-gradient(135deg,#e0f2f1,#a7d9d5)', '#00695c'),
+  ('linear-gradient(135deg,#f3e5f5,#d7b8e8)', '#6a1b9a'),
+  ('linear-gradient(135deg,#e1f5fe,#90caf9)', '#01579b'),
+  ('linear-gradient(135deg,#fff9c4,#f9e07a)', '#827717'),
+  ('linear-gradient(135deg,#fce4ec,#f48fb1)', '#880e4f'),
+  ('linear-gradient(135deg,#efebe9,#bcaaa4)', '#4e342e'),
+] %}
+{% set lt_class_map = {
+  'annual':'annual','sick':'sick','maternity':'maternity',
+  'paternity':'paternity','emergency':'emergency','unpaid':'unpaid',
+  'compassionate':'compassionate'
+} %}
+
+<div class="wot-card">
+  <div class="wot-header">
+    <div class="wot-title">
+      <div class="wot-title-icon"><i class="ti ti-armchair"></i></div>
+      Who's Out Today
+    </div>
+    <span class="wot-count-pill">
+      {{ on_leave_today|length }}
+      {{ 'employee' if on_leave_today|length == 1 else 'employees' }}
+    </span>
+  </div>
+
+  {% if on_leave_today %}
+  <div class="wot-grid">
+    {% for req in on_leave_today %}
+    {% set gi = loop.index0 % avatar_gradients|length %}
+    {% set lt_key = req.leave_type|lower|replace(' ','_') %}
+    {% set lt_cls = lt_class_map.get(lt_key, 'annual') %}
+    <div class="wot-item {{ lt_cls }}">
+      <div class="wot-avatar"
+           style="background:{{ avatar_gradients[gi][0] }};color:{{ avatar_gradients[gi][1] }}">
+        {{ req.employee.initials }}
+      </div>
+      <div class="wot-info">
+        <div class="wot-name">{{ req.employee.name }}</div>
+        <div class="wot-dept">{{ req.employee.dept }}</div>
+      </div>
+      <div class="wot-meta">
+        <span class="wot-type-pill {{ lt_cls }}">{{ req.leave_type }}</span>
+        <div class="wot-back">
+          <i class="ti ti-arrow-back-up" style="font-size:10px"></i>
+          {{ req.to_date }}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="wot-empty">
+    <div class="wot-empty-icon"><i class="ti ti-circle-check"></i></div>
+    Everyone is in today — no approved leave.
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

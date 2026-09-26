@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block page_title %}Audit Log{% endblock %}
+{% block content %}
+
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+  <div>
+    <h2 style="font-size:18px;font-weight:700;margin-bottom:2px">Audit Log</h2>
+    <p style="font-size:13px;color:var(--muted)">Last 200 system events</p>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="filters" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px">
+  <form method="GET" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+    <select name="action" class="form-control" style="width:auto;padding:7px 12px;font-size:13px" onchange="this.form.submit()">
+      <option value="all" {% if action_filter=='all' %}selected{% endif %}>All actions</option>
+      {% for a in action_types %}
+      <option value="{{ a }}" {% if action_filter==a %}selected{% endif %}>{{ a.replace('_',' ')|title }}</option>
+      {% endfor %}
+    </select>
+    <input type="text" name="actor" value="{{ actor_filter }}" placeholder="Filter by username…"
+           class="form-control" style="width:180px;padding:7px 12px;font-size:13px">
+    <button type="submit" class="btn-primary" style="padding:7px 16px;width:auto;font-size:13px">
+      <i class="ti ti-filter"></i> Filter
+    </button>
+    {% if action_filter != 'all' or actor_filter %}
+    <a href="{{ url_for('admin.audit_log_view') }}" style="font-size:13px;color:var(--muted);text-decoration:none;display:flex;align-items:center;gap:4px">
+      <i class="ti ti-x"></i> Clear
+    </a>
+    {% endif %}
+  </form>
+</div>
+
+{% if logs %}
+<div class="card" style="padding:0;overflow:hidden">
+  <table style="width:100%;border-collapse:collapse;font-size:13px">
+    <thead>
+      <tr style="background:var(--surface);border-bottom:0.5px solid var(--border)">
+        <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px">Time (UTC)</th>
+        <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px">Actor</th>
+        <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px">Action</th>
+        <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px">Details</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for log in logs %}
+      {% set action_color = {
+          'approve_leave':   '#1D8A7A',
+          'reject_leave':    '#C62828',
+          'cancel_leave':    '#B84D05',
+          'change_password': '#1A4FA0',
+          'login':           '#4A7DD4'
+      }.get(log.action, '#6b6b6b') %}
+      <tr style="border-bottom:0.5px solid var(--border)" class="table-row-hover">
+        <td style="padding:10px 14px;color:var(--muted);white-space:nowrap">
+          {{ log.logged_at[:16].replace('T',' ') }}
+        </td>
+        <td style="padding:10px 14px">
+          <div style="font-weight:600">{{ log.actor_name }}</div>
+          <div style="font-size:11px;color:var(--muted)">{{ log.actor_username }}</div>
+        </td>
+        <td style="padding:10px 14px">
+          <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;background:{{ action_color }}18;color:{{ action_color }}">
+            {% if log.action == 'approve_leave' %}<i class="ti ti-check"></i>
+            {% elif log.action == 'reject_leave' %}<i class="ti ti-x"></i>
+            {% elif log.action == 'cancel_leave' %}<i class="ti ti-ban"></i>
+            {% elif log.action == 'change_password' %}<i class="ti ti-lock"></i>
+            {% elif log.action == 'login' %}<i class="ti ti-login"></i>
+            {% else %}<i class="ti ti-activity"></i>{% endif %}
+            {{ log.action.replace('_',' ')|title }}
+          </span>
+        </td>
+        <td style="padding:10px 14px;color:var(--muted);max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="{{ log.target_desc or '' }}">
+          {{ log.target_desc or '—' }}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="card" style="text-align:center;padding:48px 24px;color:var(--muted)">
+  <i class="ti ti-clipboard-list" style="font-size:40px;margin-bottom:12px;display:block"></i>
+  No audit events found{% if action_filter != 'all' or actor_filter %} for the current filters{% endif %}.
+</div>
+{% endif %}
+
+<style>
+.table-row-hover:hover { background: var(--surface); }
+</style>
+{% endblock %}

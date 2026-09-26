@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block page_title %}Manager Delegations{% endblock %}
+{% block content %}
+
+{% if role == 'hr' %}
+<div class="card" style="max-width:560px;margin-bottom:24px">
+  <div class="card-header">
+    <span class="card-title"><i class="ti ti-transfer"></i> Assign Delegation</span>
+  </div>
+  <form method="POST" action="/delegations/add">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-group">
+      <div class="form-row">
+        <div>
+          <label class="form-label">Manager (going on leave)</label>
+          <select name="manager_id" class="form-control" required>
+            <option value="">Select manager…</option>
+            {% for m in managers %}
+            <option value="{{ m.id }}">{{ m.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Delegate (will approve)</label>
+          <select name="delegate_id" class="form-control" required>
+            <option value="">Select delegate…</option>
+            {% for e in employees %}
+            <option value="{{ e.id }}">{{ e.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="form-group">
+      <div class="form-row">
+        <div>
+          <label class="form-label">From Date</label>
+          <input type="date" name="from_date" class="form-control" required>
+        </div>
+        <div>
+          <label class="form-label">To Date</label>
+          <input type="date" name="to_date" class="form-control" required>
+        </div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Reason <span style="color:#94A3B8">(optional)</span></label>
+      <input type="text" name="reason" class="form-control" placeholder="e.g. Manager on annual leave">
+    </div>
+    <button type="submit" class="btn btn-primary"><i class="ti ti-plus"></i> Add Delegation</button>
+  </form>
+</div>
+{% endif %}
+
+<div class="card">
+  <div class="card-header">
+    <span class="card-title"><i class="ti ti-list"></i> All Delegations</span>
+  </div>
+  {% if delegations %}
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Manager</th>
+        <th>Delegate</th>
+        <th>From</th>
+        <th>To</th>
+        <th>Reason</th>
+        <th>Status</th>
+        {% if role == 'hr' %}<th></th>{% endif %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for d in delegations %}
+      <tr>
+        <td><strong>{{ d.manager_name }}</strong></td>
+        <td>{{ d.delegate_name }}</td>
+        <td>{{ d.from_date }}</td>
+        <td>{{ d.to_date }}</td>
+        <td style="color:#64748B;font-size:13px">{{ d.reason or '—' }}</td>
+        <td>
+          {% if d.active %}
+            <span class="badge badge-success">Active</span>
+          {% else %}
+            <span class="badge badge-muted">Inactive</span>
+          {% endif %}
+        </td>
+        {% if role == 'hr' %}
+        <td>
+          {% if d.active %}
+          <form method="POST" action="/delegations/deactivate/{{ d.id }}" style="display:inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-sm btn-danger"
+              onclick="return confirm('Deactivate this delegation?')">
+              <i class="ti ti-x"></i> Deactivate
+            </button>
+          </form>
+          {% endif %}
+        </td>
+        {% endif %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div style="padding:32px;text-align:center;color:#94A3B8">
+    <i class="ti ti-transfer" style="font-size:32px;display:block;margin-bottom:8px"></i>
+    No delegations set up yet.
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}

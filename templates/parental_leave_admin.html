@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% block page_title %}Maternity / Paternity Leave{% endblock %}
+{% block content %}
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for category, message in messages %}
+  <div class="alert" style="{% if category == 'success' %}background:#ECFDF5;color:#065F46;border:0.5px solid #6EE7B7;{% else %}background:#FEEBEB;color:#8B0000;border:0.5px solid #F5A5A5;{% endif %}margin-bottom:16px">
+    <i class="ti {% if category == 'success' %}ti-circle-check{% else %}ti-alert-circle{% endif %}"></i>
+    {{ message }}
+  </div>
+  {% endfor %}
+{% endwith %}
+
+<div style="display:grid;grid-template-columns:380px 1fr;gap:24px;align-items:start;max-width:1100px">
+
+  <!-- ── Left: Grant Form ──────────────────────────────────────────────────── -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Grant Parental Leave</span>
+    </div>
+
+    <!-- Admin-only notice -->
+    <div style="background:#F0F9FF;border:0.5px solid #BAE6FD;border-radius:8px;padding:11px 14px;margin-bottom:18px;display:flex;gap:10px;align-items:flex-start">
+      <i class="ti ti-lock" style="color:#0284C7;font-size:15px;flex-shrink:0;margin-top:1px"></i>
+      <p style="font-size:12px;color:#0369A1;margin:0;line-height:1.6">
+        <strong>HR only.</strong> Maternity and Paternity leave cannot be self-applied by staff.
+        HR must review supporting documentation (medical certificate / birth letter) before granting.
+      </p>
+    </div>
+
+    <form method="POST" action="/parental-leave/grant">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="form-group">
+        <label class="form-label">Employee</label>
+        <select name="employee_id" class="form-control" required id="empSelect" onchange="updateLeaveTypes()">
+          <option value="">Select employee...</option>
+          {% for emp in employees %}
+          <option value="{{ emp.id }}" data-gender="{{ emp.gender }}">{{ emp.name }} — {{ emp.dept }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Leave Type</label>
+        <select name="leave_type" class="form-control" required id="leaveTypeSelect">
+          <option value="">Select type...</option>
+        </select>
+        <div id="typeHint" style="font-size:11px;color:var(--muted);margin-top:5px;display:none"></div>
+      </div>
+
+      <div class="form-group">
+        <div class="form-row">
+          <div>
+            <label class="form-label">From</label>
+            <input type="date" name="from_date" class="form-control" required id="fromDate" min="{{ today }}">
+          </div>
+          <div>
+            <label class="form-label">To</label>
+            <input type="date" name="to_date" class="form-control" required id="toDate" min="{{ today }}">
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">HR Notes / Supporting Documentation Reference</label>
+        <textarea name="notes" class="form-control" rows="2" placeholder="e.g. Medical cert ref #MC-2026-001 verified on 25 May 2026..."></textarea>
+      </div>
+
+      <div style="padding:10px 14px;background:var(--surface);border-radius:8px;border:0.5px solid var(--border);margin-bottom:16px">
+        <div style="display:flex;justify-content:space-between;font-size:12.5px">
+          <span style="color:var(--muted)">Maternity entitlement:</span>
+          <strong>90 days</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-top:5px">
+          <span style="color:var(--muted)">Paternity entitlement:</span>
+          <strong>10 days</strong>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary" style="width:100%">
+        <i class="ti ti-circle-check"></i> Grant Leave
+      </button>
+    </form>
+  </div>
+
+  <!-- ── Right: Grant History ──────────────────────────────────────────────── -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Grant History</span>
+      <span style="font-size:12px;color:var(--muted)">{{ grants|length }} record{{ 's' if grants|length != 1 else '' }}</span>
+    </div>
+
+    {% if grants %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Employee</th>
+            <th>Type</th>
+            <th>From</th>
+            <th>To</th>
+            <th>Days</th>
+            <th>Granted By</th>
+            <th>Date</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for g in grants %}
+          <tr>
+            <td>
+              <div style="font-size:13px;font-weight:600">{{ g.emp_name }}</div>
+              <div style="font-size:11px;color:var(--muted)">{{ g.dept }}</div>
+            </td>
+            <td>
+              <span class="badge" style="{% if 'Maternity' in g.leave_type %}background:#F5F3FF;color:#7C3AED{% else %}background:var(--ct-blue-light);color:var(--ct-blue){% endif %}">
+                {{ 'Maternity' if 'Maternity' in g.leave_type else 'Paternity' }}
+              </span>
+            </td>
+            <td>{{ g.from_date }}</td>
+            <td>{{ g.to_date }}</td>
+            <td><strong>{{ g.days }}</strong></td>
+            <td style="font-size:12px;color:var(--muted)">{{ g.granted_by }}</td>
+            <td style="font-size:12px;color:var(--muted)">{{ g.granted_at[:10] }}</td>
+            <td style="font-size:11.5px;color:var(--muted);max-width:200px">{{ g.notes or '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p style="font-size:13px;color:var(--muted);text-align:center;padding:32px 0">No parental leave grants recorded yet.</p>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const typeHints = {
+  'Maternity Leave': 'Available to female employees · 90 days entitlement',
+  'Paternity Leave': 'Available to male employees · 10 days entitlement',
+};
+
+function updateLeaveTypes() {
+  const sel = document.getElementById('empSelect');
+  const opt = sel.options[sel.selectedIndex];
+  const gender = opt ? opt.getAttribute('data-gender') : null;
+  const typeSel = document.getElementById('leaveTypeSelect');
+  const hint = document.getElementById('typeHint');
+
+  typeSel.innerHTML = '<option value="">Select type...</option>';
+  if (!gender) { hint.style.display = 'none'; return; }
+
+  const types = gender === 'female'
+    ? ['Maternity Leave']
+    : ['Paternity Leave'];
+
+  types.forEach(t => {
+    const o = document.createElement('option');
+    o.value = t; o.textContent = t;
+    typeSel.appendChild(o);
+  });
+
+  // Auto-select if only one option
+  if (types.length === 1) typeSel.value = types[0];
+
+  const hintText = types.map(t => typeHints[t]).join(' | ');
+  hint.textContent = hintText;
+  hint.style.display = 'block';
+}
+
+document.getElementById('fromDate').addEventListener('change', function() {
+  document.getElementById('toDate').min = this.value;
+});
+</script>
+{% endblock %}

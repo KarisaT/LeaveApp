@@ -1,0 +1,284 @@
+{% extends "base.html" %}
+{% block page_title %}Employees{% endblock %}
+{% block content %}
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for category, message in messages %}
+  <div class="alert alert-{{ 'success' if category == 'success' else 'error' }}" style="{% if category == 'error' %}background:#FEEBEB;color:#8B0000;border:0.5px solid #F5A5A5;{% endif %}">
+    {{ message }}
+  </div>
+  {% endfor %}
+{% endwith %}
+
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">Employee Leave Balances</span>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <input type="text" placeholder="Search employees..." class="form-control" style="width:200px;font-size:12px;padding:6px 10px" id="searchInput" oninput="filterTable()">
+      {% if role in ['hr', 'manager'] %}
+      <button class="btn btn-primary btn-sm" onclick="document.getElementById('addModal').style.display='flex'">
+        <i class="ti ti-user-plus"></i> Add Employee
+      </button>
+      {% endif %}
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table id="empTable">
+      <thead>
+        <tr>
+          <th>Employee</th>
+          <th>Gender</th>
+          <th>Department</th>
+          <th>Annual (rem/21)</th>
+          <th>Sick (rem/30)</th>
+          <th>Parental</th>
+          <th>Usage</th>
+          {% if role in ['hr', 'manager'] %}<th style="text-align:center">Actions</th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for emp in employees %}
+        <tr>
+          <td>
+            <div class="emp-cell">
+              <div class="emp-avatar" style="background:{% if emp.gender == 'female' %}#FDE8F0;color:#B0006A{% else %}var(--ct-blue-light);color:var(--ct-blue){% endif %}">{{ emp.initials }}</div>
+              <div>
+                <div style="font-size:13px;font-weight:600">{{ emp.name }}</div>
+                <div class="emp-dept">{{ emp.email }}</div>
+              </div>
+            </div>
+          </td>
+          <td>
+            <span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;padding:2px 8px;border-radius:10px;
+              {% if emp.gender == 'female' %}background:#FDE8F0;color:#B0006A{% else %}background:var(--ct-blue-light);color:var(--ct-blue){% endif %}">
+              <i class="ti ti-{% if emp.gender == 'female' %}gender-female{% else %}gender-male{% endif %}" style="font-size:13px"></i>
+              {{ emp.gender | capitalize }}
+            </span>
+          </td>
+          <td>{{ emp.dept }}</td>
+          <td><strong>{{ emp.balances.annual or 0 }}</strong> / 21</td>
+          <td><strong>{{ emp.balances.sick or 0 }}</strong> / 30</td>
+          <td style="font-size:12px;color:var(--muted)">
+            {% if emp.gender == 'female' %}
+              Mat: <strong>{{ emp.balances.maternity or 0 }}</strong>/90d
+            {% else %}
+              Pat: <strong>{{ emp.balances.paternity or 0 }}</strong>/10d
+            {% endif %}
+          </td>
+          <td>
+            <div style="width:90px;background:var(--surface);border-radius:4px;height:7px;overflow:hidden">
+              <div style="width:{{ ((21 - (emp.balances.annual or 0)) / 21 * 100)|int }}%;height:100%;background:var(--ct-orange);border-radius:4px"></div>
+            </div>
+          </td>
+          {% if role in ['hr', 'manager'] %}
+          <td style="text-align:center">
+            <button class="btn btn-sm" onclick='openEditModal({{ emp|tojson }})' title="Edit employee">
+              <i class="ti ti-pencil"></i>
+            </button>
+          </td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if role in ['hr', 'manager'] %}
+
+<!-- ── Add Employee Modal ─────────────────────────────────────────────── -->
+<div id="addModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:16px">
+  <div style="background:var(--card);border-radius:var(--radius-lg);padding:28px;width:100%;max-width:540px;max-height:90vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <h3 style="font-size:16px;font-weight:600">Add New Employee</h3>
+      <button onclick="document.getElementById('addModal').style.display='none'" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--muted)">&times;</button>
+    </div>
+
+    <form method="POST" action="/employees/add">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Full Name *</label>
+          <input type="text" name="name" class="form-control" placeholder="e.g. Jane Mwangi" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Initials *</label>
+          <input type="text" name="initials" class="form-control" placeholder="e.g. JM" maxlength="3" required>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Department *</label>
+          <input type="text" name="dept" class="form-control" placeholder="e.g. Engineering" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Job Title *</label>
+          <input type="text" name="role_title" class="form-control" placeholder="e.g. Software Engineer" required>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Email *</label>
+          <input type="email" name="email" class="form-control" placeholder="name@groot.co.ke" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Start Date *</label>
+          <input type="date" name="start_date" class="form-control" required>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Gender *</label>
+          <select name="gender" class="form-control" required>
+            <option value="female">Female — Maternity (90 days)</option>
+            <option value="male">Male — Paternity (10 days)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Manager</label>
+          <select name="manager_id" class="form-control">
+            <option value="">— No manager —</option>
+            {% for m in managers %}
+            <option value="{{ m.id }}">{{ m.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div style="border-top:0.5px solid var(--border);margin:18px 0 16px"></div>
+      <p style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:14px">Login Account</p>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Username *</label>
+          <input type="text" name="username" class="form-control" placeholder="e.g. jane.mwangi" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Temporary Password *</label>
+          <input type="password" name="password" class="form-control" placeholder="Min 8 characters" minlength="8" required>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">System Role *</label>
+        <select name="user_role" class="form-control">
+          <option value="employee">Employee</option>
+          <option value="manager">Manager</option>
+          <option value="hr">HR Admin</option>
+          <option value="payroll">Payroll View</option>
+        </select>
+      </div>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
+        <button type="button" class="btn" onclick="document.getElementById('addModal').style.display='none'">Cancel</button>
+        <button type="submit" class="btn btn-primary"><i class="ti ti-user-plus"></i> Add Employee</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ── Edit Employee Modal ────────────────────────────────────────────── -->
+<div id="editModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:16px">
+  <div style="background:var(--card);border-radius:var(--radius-lg);padding:28px;width:100%;max-width:540px;max-height:90vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <h3 style="font-size:16px;font-weight:600"><i class="ti ti-pencil" style="color:var(--ct-orange)"></i> Edit Employee</h3>
+      <button onclick="document.getElementById('editModal').style.display='none'" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--muted)">&times;</button>
+    </div>
+
+    <form method="POST" id="editForm" action="">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Full Name *</label>
+          <input type="text" name="name" id="edit_name" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Initials *</label>
+          <input type="text" name="initials" id="edit_initials" class="form-control" maxlength="3" required>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Department *</label>
+          <input type="text" name="dept" id="edit_dept" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Job Title *</label>
+          <input type="text" name="role_title" id="edit_role_title" class="form-control" required>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Email *</label>
+          <input type="email" name="email" id="edit_email" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Start Date *</label>
+          <input type="date" name="start_date" id="edit_start_date" class="form-control" required>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Gender *</label>
+          <select name="gender" id="edit_gender" class="form-control">
+            <option value="female">Female</option>
+            <option value="male">Male</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Manager</label>
+          <select name="manager_id" id="edit_manager_id" class="form-control">
+            <option value="">— No manager —</option>
+            {% for m in managers %}
+            <option value="{{ m.id }}">{{ m.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
+        <button type="button" class="btn" onclick="document.getElementById('editModal').style.display='none'">Cancel</button>
+        <button type="submit" class="btn btn-primary"><i class="ti ti-check"></i> Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endif %}
+
+{% endblock %}
+{% block scripts %}
+<script>
+function filterTable(){
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  document.querySelectorAll('#empTable tbody tr').forEach(row => {
+    row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+['addModal','editModal'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('click', function(e){ if(e.target===this) this.style.display='none'; });
+});
+function openEditModal(emp) {
+  document.getElementById('edit_name').value       = emp.name       || '';
+  document.getElementById('edit_initials').value   = emp.initials   || '';
+  document.getElementById('edit_dept').value       = emp.dept       || '';
+  document.getElementById('edit_role_title').value = emp.role_title || '';
+  document.getElementById('edit_email').value      = emp.email      || '';
+  document.getElementById('edit_start_date').value = emp.start_date || '';
+  document.getElementById('edit_gender').value     = emp.gender     || 'male';
+  const mgr = document.getElementById('edit_manager_id');
+  mgr.value = emp.manager_id != null ? emp.manager_id : '';
+  document.getElementById('editForm').action = '/employees/edit/' + emp.id;
+  document.getElementById('editModal').style.display = 'flex';
+}
+</script>
+{% endblock %}

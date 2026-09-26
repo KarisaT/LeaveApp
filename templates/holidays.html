@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block page_title %}Public Holidays{% endblock %}
+{% block content %}
+{% if role in ['hr', 'manager'] %}
+<div class="card" style="max-width:480px;margin-bottom:20px">
+  <div class="card-header"><span class="card-title">Add Public Holiday</span></div>
+  <form method="POST">
+    <div class="form-group">
+      <div class="form-row">
+        <div>
+          <label class="form-label">Date</label>
+          <input type="date" name="date" class="form-control" required>
+        </div>
+        <div>
+          <label class="form-label">Type</label>
+          <select name="type" class="form-control">
+            <option>National Holiday</option>
+            <option>Regional Holiday</option>
+            <option>Company Holiday</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Holiday Name</label>
+      <input type="text" name="name" class="form-control" placeholder="e.g. Independence Day" required>
+    </div>
+    <button type="submit" class="btn btn-primary"><i class="ti ti-plus"></i> Add Holiday</button>
+  </form>
+</div>
+{% endif %}
+
+<div class="card">
+  <div class="card-header"><span class="card-title">Public Holidays 2026</span></div>
+  <div class="holiday-list">
+    {% for h in holidays %}
+    {% set parts = h.date.split('-') %}
+    {% set months = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'] %}
+    <div class="holiday-item">
+      <div class="holiday-date-box">
+        <div class="holiday-date-day">{{ parts[2]|int }}</div>
+        <div class="holiday-date-month">{{ months[parts[1]|int] }}</div>
+      </div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600">{{ h.name }}</div>
+        <div style="font-size:11px;color:var(--muted)">{{ h.type }}</div>
+      </div>
+      {% if role in ['hr', 'manager'] %}
+      <form method="POST" action="/holidays/delete/{{ h.id }}" style="display:inline" onsubmit="return confirm('Delete this holiday?')">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-sm btn-ghost" style="color:var(--red)">
+        <i class="ti ti-trash"></i>
+        </button>
+      </form>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

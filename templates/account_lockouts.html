@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% block page_title %}Account Lockouts{% endblock %}
+{% block content %}
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for category, message in messages %}
+  <div class="alert alert-{{ 'success' if category == 'success' else 'error' }}"
+       style="{% if category == 'error' %}background:#FEEBEB;color:#8B0000;border:0.5px solid #F5A5A5;{% endif %}">
+    {{ message }}
+  </div>
+  {% endfor %}
+{% endwith %}
+
+<!-- Page header -->
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+  <div>
+    <h2 style="font-size:18px;font-weight:700;color:var(--text)">Account Lockouts</h2>
+    <p style="font-size:13px;color:var(--muted);margin-top:3px">
+      Accounts locked after {{ max_attempts }} failed login attempts · Auto-unlock after {{ lockout_minutes }} minutes
+    </p>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span style="font-size:12px;padding:4px 12px;border-radius:20px;font-weight:600;
+      {% if lockouts %}background:#FEF3C7;color:#B45309;{% else %}background:#F0FDF4;color:#16A34A;{% endif %}">
+      <i class="ti ti-lock{% if not lockouts %}-open{% endif %}"></i>
+      {{ lockouts|length }} locked account{% if lockouts|length != 1 %}s{% endif %}
+    </span>
+  </div>
+</div>
+
+{% if not lockouts %}
+<!-- Empty state -->
+<div class="card" style="text-align:center;padding:60px 24px">
+  <div style="width:56px;height:56px;border-radius:16px;background:#F0FDF4;display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px">
+    <i class="ti ti-shield-check" style="font-size:28px;color:#16A34A"></i>
+  </div>
+  <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:6px">All clear — no locked accounts</div>
+  <div style="font-size:13px;color:var(--muted)">There are currently no accounts locked out of the system.</div>
+</div>
+
+{% else %}
+<!-- Lockout table -->
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">Locked Accounts</span>
+    <input type="text" placeholder="Search..." class="form-control"
+           style="width:180px;font-size:12px;padding:6px 10px" id="searchInput"
+           oninput="filterTable()">
+  </div>
+  <div class="table-wrap">
+    <table id="lockTable">
+      <thead>
+        <tr>
+          <th>Account</th>
+          <th>Role</th>
+          <th>Failed Attempts</th>
+          <th>Locked At</th>
+          <th>Auto-unlock</th>
+          <th style="text-align:center">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for lk in lockouts %}
+        <tr>
+          <td>
+            <div class="emp-cell">
+              <div class="emp-avatar"
+                style="background:{% if lk.emp_name %}#FEF3C7;color:#B45309{% else %}#F1F5F9;color:#64748B{% endif %}">
+                {% if lk.initials %}{{ lk.initials }}{% else %}<i class="ti ti-user" style="font-size:13px"></i>{% endif %}
+              </div>
+              <div>
+                <div style="font-size:13px;font-weight:600">
+                  {% if lk.emp_name %}{{ lk.emp_name }}{% else %}<span style="color:var(--muted);font-style:italic">Unknown user</span>{% endif %}
+                </div>
+                <div class="emp-dept">{{ lk.username }}</div>
+              </div>
+            </div>
+          </td>
+          <td>
+            {% if lk.user_role %}
+            <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;
+              {% if lk.user_role == 'hr' %}background:#F0FDF4;color:#16A34A
+              {% elif lk.user_role == 'manager' %}background:#FFFBEB;color:#D97706
+              {% elif lk.user_role == 'payroll' %}background:#FAF5FF;color:#7C3AED
+              {% else %}background:#EFF6FF;color:#1D4ED8{% endif %}">
+              {{ lk.user_role | capitalize }}
+            </span>
+            {% else %}
+            <span style="font-size:11px;color:var(--muted)">—</span>
+            {% endif %}
+          </td>
+          <td>
+            <span style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:600;color:#9F1239">
+              <i class="ti ti-alert-triangle" style="font-size:14px"></i>
+              {{ lk.fail_count }} / {{ max_attempts }}
+            </span>
+          </td>
+          <td style="font-size:12px;color:var(--muted)">
+            {% if lk.locked_at %}
+              {{ lk.locked_at[:16].replace('T', ' ') }}
+            {% else %}—{% endif %}
+          </td>
+          <td style="font-size:12px;color:var(--muted)">
+            {% if lk.locked_at %}
+              +{{ lockout_minutes }}m
+            {% else %}—{% endif %}
+          </td>
+          <td style="text-align:center">
+            <button class="btn btn-sm"
+                    style="background:#16A34A;color:#fff;border-color:#16A34A"
+                    onclick="confirmUnlock('{{ lk.username }}', '{{ lk.emp_name or lk.username }}')">
+              <i class="ti ti-lock-open"></i> Unlock
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<!-- Confirm unlock modal -->
+<div id="unlockModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:16px">
+  <div style="background:var(--card);border-radius:var(--radius-lg);padding:28px;width:100%;max-width:420px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <div style="width:40px;height:40px;border-radius:10px;background:#F0FDF4;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <i class="ti ti-lock-open" style="font-size:20px;color:#16A34A"></i>
+      </div>
+      <div>
+        <div style="font-size:15px;font-weight:700;color:var(--text)">Unlock Account</div>
+        <div style="font-size:12px;color:var(--muted)" id="unlockSubtitle">This will restore login access immediately.</div>
+      </div>
+    </div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:20px">
+      Are you sure you want to unlock <strong id="unlockName"></strong>? Their failed attempt count will be reset and they will be notified.
+    </p>
+    <form method="POST" action="/account-lockouts/unlock" id="unlockForm">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="username" id="unlockUsername">
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button type="button" class="btn"
+                onclick="document.getElementById('unlockModal').style.display='none'">Cancel</button>
+        <button type="submit" class="btn btn-primary"
+                style="background:#16A34A;border-color:#16A34A">
+          <i class="ti ti-lock-open"></i> Yes, unlock account
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+function filterTable() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  document.querySelectorAll('#lockTable tbody tr').forEach(row => {
+    row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+function confirmUnlock(username, displayName) {
+  document.getElementById('unlockUsername').value = username;
+  document.getElementById('unlockName').textContent = displayName;
+  document.getElementById('unlockSubtitle').textContent =
+    'This will restore login access for ' + username + ' immediately.';
+  document.getElementById('unlockModal').style.display = 'flex';
+}
+document.getElementById('unlockModal').addEventListener('click', function(e) {
+  if (e.target === this) this.style.display = 'none';
+});
+</script>
+{% endblock %}

@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% block page_title %}Reports & Analytics{% endblock %}
+{% block content %}
+<div class="reports-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+
+  <div class="card">
+    <div class="card-header"><span class="card-title">Leave by Type (YTD)</span></div>
+    <div class="chart-bar-wrap">
+      {% set max_type = type_totals.values()|list|max if type_totals else 1 %}
+      {% for ltype, days in type_totals.items() %}
+      <div class="chart-row">
+        <div class="chart-label">{{ ltype.replace(' Leave','') }}</div>
+        <div class="chart-bar-bg">
+          <div class="chart-bar-fill orange" style="width:{{ (days/max_type*90)|int }}%">
+            <span class="chart-val">{{ days }}d</span>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="card-title">Leave by Department</span></div>
+    <div class="chart-bar-wrap">
+      {% set max_dept = dept_totals.values()|list|max if dept_totals else 1 %}
+      {% set colors = ['orange','blue','teal','gray','green'] %}
+      {% for dept, days in dept_totals.items() %}
+      {% set colors_list = ['orange','blue','teal','gray','green'] %}
+      <div class="chart-row">
+        <div class="chart-label">{{ dept }}</div>
+        <div class="chart-bar-bg">
+          <div class="chart-bar-fill {{ colors_list[loop.index0 % 5] }}" style="width:{{ (days/max_dept*90)|int }}%">
+            <span class="chart-val">{{ days }}d</span>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="card-title">Request Status</span></div>
+    <div style="display:flex;flex-direction:column;gap:12px;padding-top:8px">
+      {% set total = (status_counts.approved + status_counts.rejected + status_counts.pending) %}
+      {% for status, count in status_counts.items() %}
+      {% set color = 'green' if status=='approved' else ('red' if status=='rejected' else 'orange') %}
+      <div class="chart-row">
+        <div class="chart-label">{{ status|capitalize }}</div>
+        <div class="chart-bar-bg">
+          <div class="chart-bar-fill {{ color }}" style="width:{{ (count/total*90)|int if total else 0 }}%">
+            <span class="chart-val">{{ count }}</span>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="card-title">Approval Rate (YTD)</span></div>
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px 0">
+      <div style="font-size:52px;font-weight:700;color:var(--amber)">{{ approval_rate }}%</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:4px">of requests approved</div>
+      <div style="width:100%;margin-top:16px">
+        <div class="progress-bar" style="height:10px">
+          <div class="progress-fill" style="width:{{ approval_rate }}%;background:var(--amber)"></div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;width:100%;margin-top:8px">
+        <span style="font-size:11px;color:var(--muted)">{{ status_counts.approved }} approved</span>
+        <span style="font-size:11px;color:var(--muted)">{{ status_counts.rejected }} rejected</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Absenteeism Tracker ───────────────────────────────────────────────── -->
+<div class="card" style="margin-top:16px">
+  <div class="card-header" style="margin-bottom:4px">
+    <span class="card-title" style="display:flex;align-items:center;gap:8px">
+      <span style="width:26px;height:26px;border-radius:7px;background:#FEE2E2;display:inline-flex;align-items:center;justify-content:center;color:#B91C1C;font-size:14px;flex-shrink:0">
+        <i class="ti ti-stethoscope"></i>
+      </span>
+      Sick Leave Absenteeism Tracker
+    </span>
+    <span style="font-size:11px;color:var(--muted)">Based on approved sick leave only</span>
+  </div>
+
+  {% if absenteeism %}
+  <div style="font-size:12px;color:var(--muted);margin-bottom:14px;padding:8px 12px;background:var(--surface);border-radius:var(--radius);border:1px solid var(--border)">
+    <i class="ti ti-alert-triangle" style="color:#D97706"></i>
+    <strong style="color:var(--text)">Flagged</strong> = 3 or more occurrences, or more than 50% of sick balance used.
+    Review flagged employees for patterns or wellness support needs.
+  </div>
+  <div class="table-wrap">
+    <table class="absentee-table">
+      <thead>
+        <tr>
+          <th>Employee</th>
+          <th>Department</th>
+          <th>Occurrences</th>
+          <th class="hide-mobile">Total Days Taken</th>
+          <th>Balance Left</th>
+          <th>Usage</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in absenteeism %}
+        <tr>
+          <td>
+            <div class="emp-cell">
+              <div class="emp-avatar" style="background:{% if row.flagged %}#FEE2E2;color:#B91C1C{% else %}var(--surface);color:var(--muted){% endif %}">
+                {{ row.employee.initials }}
+              </div>
+              <div>
+                <div style="font-weight:600;font-size:13px">{{ row.employee.name }}</div>
+                <div class="emp-dept">{{ row.employee.role_title }}</div>
+              </div>
+            </div>
+          </td>
+          <td style="font-size:12px;color:var(--muted)">{{ row.employee.dept }}</td>
+          <td>
+            <span style="font-size:14px;font-weight:700;color:{% if row.occurrences >= 3 %}var(--red){% else %}var(--text){% endif %}">
+              {{ row.occurrences }}
+            </span>
+            <span style="font-size:11px;color:var(--muted)"> episode{{ 's' if row.occurrences != 1 }}</span>
+          </td>
+          <td class="hide-mobile" style="font-size:13px">{{ row.total_days }} day{{ 's' if row.total_days != 1 }}</td>
+          <td>
+            <span style="font-size:13px;font-weight:600;color:{% if row.remaining <= 10 %}var(--red){% elif row.remaining <= 20 %}var(--amber){% else %}#16A34A{% endif %}">
+              {{ row.remaining }}
+            </span>
+            <span style="font-size:11px;color:var(--muted)"> / 30</span>
+          </td>
+          <td style="min-width:100px">
+            {% set pct = ((row.used / 30) * 100)|int %}
+            <div style="display:flex;align-items:center;gap:7px">
+              <div class="progress-bar" style="flex:1;height:6px">
+                <div class="progress-fill" style="width:{{ pct }}%;background:{% if pct >= 50 %}var(--red){% elif pct >= 30 %}var(--amber){% else %}#16A34A{% endif %}"></div>
+              </div>
+              <span style="font-size:11px;color:var(--muted);white-space:nowrap">{{ pct }}%</span>
+            </div>
+          </td>
+          <td>
+            {% if row.flagged %}
+            <span class="badge" style="background:#FEE2E2;color:#B91C1C">
+              <i class="ti ti-flag-filled" style="font-size:10px;margin-right:3px"></i>Flagged
+            </span>
+            {% else %}
+            <span class="badge" style="background:#DCFCE7;color:#15803D">Normal</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div style="text-align:center;padding:32px 20px;color:var(--muted);font-size:13px">
+    <i class="ti ti-clipboard-check" style="font-size:28px;display:block;margin-bottom:8px;color:#16A34A"></i>
+    No approved sick leave on record yet.
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}

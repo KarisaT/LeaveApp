@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block page_title %}Leave Calendar{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="cal-header">
+    <div style="display:flex;align-items:center;gap:10px">
+      <button class="btn btn-sm btn-ghost" id="prevBtn"><i class="ti ti-chevron-left"></i></button>
+      <span class="cal-month" id="calTitle"></span>
+      <button class="btn btn-sm btn-ghost" id="nextBtn"><i class="ti ti-chevron-right"></i></button>
+    </div>
+    <div style="display:flex;gap:16px;align-items:center">
+      <span style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)"><span style="width:9px;height:9px;border-radius:50%;background:var(--ct-orange);display:inline-block"></span>Leave</span>
+      <span style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)"><span style="width:9px;height:9px;border-radius:50%;background:var(--ct-blue);display:inline-block"></span>Holiday</span>
+    </div>
+  </div>
+  <div class="cal-grid" id="calGrid"></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const leaveEvents = {{ leave_events|safe }};
+const holidays = {{ holidays|safe }};
+let currentYear = 2026, currentMonth = 4; // 0-indexed: 4 = May
+const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const dayLabels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+function renderCalendar() {
+  document.getElementById('calTitle').textContent = monthNames[currentMonth] + ' ' + currentYear;
+  const grid = document.getElementById('calGrid');
+  grid.innerHTML = '';
+  dayLabels.forEach(d => {
+    const el = document.createElement('div');
+    el.className = 'cal-day-label';
+    el.textContent = d;
+    grid.appendChild(el);
+  });
+  const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+  const daysInMonth = new Date(currentYear, currentMonth+1, 0).getDate();
+  const prevDays = new Date(currentYear, currentMonth, 0).getDate();
+  for(let i=0;i<firstDay;i++){
+    const dayOfWeek = i; // firstDay offset aligns with Sun=0..Sat=6
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+    const el=document.createElement('div');
+    el.className='cal-day other-month' + (isWeekend?' weekend':'');
+    el.innerHTML=`<span class="day-num">${prevDays-firstDay+1+i}</span>`;
+    grid.appendChild(el);
+  }
+  const today = new Date();
+  for(let d=1;d<=daysInMonth;d++){
+    const dateStr = `${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isToday = today.getFullYear()===currentYear && today.getMonth()===currentMonth && today.getDate()===d;
+    const hasLeave = leaveEvents.some(r => r.from <= dateStr && dateStr <= r.to);
+    const isHoliday = holidays.some(h => h.date === dateStr);
+    const dayOfWeek = new Date(currentYear, currentMonth, d).getDay();
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+    const el = document.createElement('div');
+    el.className = 'cal-day' + (isToday?' today':'') + (isWeekend?' weekend':'');
+    el.innerHTML = `<span class="day-num">${d}</span>${hasLeave?'<div class="day-dot dot-leave"></div>':''}${isHoliday?'<div class="day-dot dot-holiday"></div>':''}`;
+    grid.appendChild(el);
+  }
+  const remaining = 42 - firstDay - daysInMonth;
+  for(let i=1;i<=remaining;i++){
+    const totalCell = firstDay + daysInMonth + i - 1;
+    const dayOfWeek = totalCell % 7;
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+    const el=document.createElement('div');
+    el.className='cal-day other-month' + (isWeekend?' weekend':'');
+    el.innerHTML=`<span class="day-num">${i}</span>`;
+    grid.appendChild(el);
+  }
+}
+document.getElementById('prevBtn').onclick = () => { if(--currentMonth<0){currentMonth=11;currentYear--;} renderCalendar(); };
+document.getElementById('nextBtn').onclick = () => { if(++currentMonth>11){currentMonth=0;currentYear++;} renderCalendar(); };
+renderCalendar();
+</script>
+{% endblock %}

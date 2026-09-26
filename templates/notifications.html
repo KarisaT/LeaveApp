@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block page_title %}Notifications{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">Notifications</span>
+    {% set unread_count = notifications_all | selectattr('read', 'equalto', false) | list | length %}
+    {% if unread_count > 0 %}
+    <span class="badge badge-pending">{{ unread_count }} unread</span>
+    {% endif %}
+  </div>
+
+  {% if notifications_all %}
+  <div class="notif-list">
+    {% for n in notifications_all %}
+    <div class="notif-item" style="{% if n.is_read %}opacity:0.55{% endif %}">
+      <div class="notif-icon {% if n.type == 'success' %}green{% elif n.type == 'warning' %}orange{% else %}blue{% endif %}">
+        {% if n.type == 'success' %}<i class="ti ti-circle-check"></i>
+        {% elif n.type == 'warning' %}<i class="ti ti-alert-triangle"></i>
+        {% else %}<i class="ti ti-info-circle"></i>{% endif %}
+      </div>
+      <div class="notif-body">
+        <div class="notif-title">{{ n.message }}</div>
+        <div class="notif-time">{{ n.time }}</div>
+      </div>
+      {% if not n.is_read %}
+      <form method="POST" action="/notifications/read/{{ n.id }}" style="flex-shrink:0">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-sm btn-ghost" title="Mark as read"
+                style="font-size:11px;color:var(--muted)">
+          <i class="ti ti-check"></i> Mark read
+        </button>
+      </form>
+      {% else %}
+      <span style="font-size:11px;color:var(--hint);flex-shrink:0">Read</span>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p style="font-size:13px;color:var(--muted);text-align:center;padding:32px 0">
+    <i class="ti ti-bell-off" style="font-size:24px;display:block;margin-bottom:8px"></i>
+    No notifications yet.
+  </p>
+  {% endif %}
+</div>
+{% endblock %}
